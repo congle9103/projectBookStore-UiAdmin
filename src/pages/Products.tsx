@@ -20,9 +20,11 @@ import Search from "antd/es/input/Search";
 import { useState } from "react";
 import type { Product } from "../types/product.type";
 
+type QueryKey = [string, { sort?: string; category?: string }];
+
 // Fetch products
-const fetchProducts = async ({ queryKey }) => {
-  const [_key, { sort, category }] = queryKey;
+const fetchProducts = async ({ queryKey }: { queryKey: QueryKey }) => {
+  const [, { sort, category }] = queryKey;
   const res = await axios.get("http://localhost:8080/api/v1/products", {
     params: { sort, category },
   });
@@ -86,13 +88,13 @@ const Products = () => {
       title: "Tên sản phẩm",
       dataIndex: "product_name",
       key: "product_name",
-      render: (text) => <span className="font-medium">{text}</span>,
+      render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
       title: "Tác giả",
       dataIndex: "authors",
       key: "authors",
-      render: (authors) => authors.join(", "),
+      render: (authors: string[]) => authors.join(", "),
     },
     {
       title: "Nhà xuất bản",
@@ -103,13 +105,13 @@ const Products = () => {
       title: "Giá bán",
       dataIndex: "price",
       key: "price",
-      render: (price) => <span>{price.toLocaleString()} đ</span>,
+      render: (price: number) => <span>{price.toLocaleString()} đ</span>,
     },
     {
       title: "Giá gốc",
       dataIndex: "originalPrice",
       key: "originalPrice",
-      render: (price) => (
+      render: (price: number) => (
         <span className="line-through">{price.toLocaleString()} đ</span>
       ),
     },
@@ -117,7 +119,7 @@ const Products = () => {
       title: "Giảm giá",
       dataIndex: "discountPercent",
       key: "discountPercent",
-      render: (percent) => (
+      render: (percent: number) => (
         <Tag color={percent < 0 ? "red" : "green"}>{percent}%</Tag>
       ),
     },
