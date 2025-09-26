@@ -100,6 +100,7 @@ const Products = () => {
       title: "Thể loại",
       dataIndex: "categories",
       key: "categories",
+      render: (text: string) => <span>{text}</span>,
     },
     {
       title: "Giá bán",
