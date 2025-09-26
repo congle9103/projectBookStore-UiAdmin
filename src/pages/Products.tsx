@@ -97,10 +97,9 @@ const Products = () => {
       render: (authors: string[]) => authors.join(", "),
     },
     {
-      title: "Thể loại",
-      dataIndex: "categories",
-      key: "categories",
-      render: (text: string) => <span>{text}</span>,
+      title: "Nhà xuất bản",
+      dataIndex: "publisher",
+      key: "publisher",
     },
     {
       title: "Giá bán",
