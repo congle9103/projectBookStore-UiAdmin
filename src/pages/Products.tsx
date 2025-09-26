@@ -195,7 +195,10 @@ const Products = () => {
               onChange={(value) => setCategory(value)} // cập nhật state category
               options={[
                 { value: "", label: "Tất cả thể loại" },
-                { value: "64f0c1e2a1234567890abc01", label: "Lịch sử Việt Nam" },
+                {
+                  value: "64f0c1e2a1234567890abc01",
+                  label: "Lịch sử Việt Nam",
+                },
                 { value: "68c4281d95425c0d0db09d4d", label: "Văn học" },
                 { value: "1", label: "Truyện tranh" },
                 { value: "2", label: "Tâm lý kỹ năng" },
@@ -218,9 +221,15 @@ const Products = () => {
           <Table
             rowKey="_id"
             columns={columns}
-            dataSource={products?.filter((p: Product) =>
-              normalizeText(p.product_name).includes(normalizeText(searchTerm))
-            )}
+            dataSource={
+              Array.isArray(products?.data)
+                ? products.data.filter((p: Product) =>
+                    normalizeText(p.product_name).includes(
+                      normalizeText(searchTerm)
+                    )
+                  )
+                : []
+            }
             pagination={{ pageSize: 5 }}
             scroll={{ x: true }}
           />
