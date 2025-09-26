@@ -97,9 +97,9 @@ const Products = () => {
       render: (authors: string[]) => authors.join(", "),
     },
     {
-      title: "Nhà xuất bản",
-      dataIndex: "publisher",
-      key: "publisher",
+      title: "Thể loại",
+      dataIndex: "category",
+      key: "category",
     },
     {
       title: "Giá bán",
