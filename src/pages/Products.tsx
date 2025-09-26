@@ -98,8 +98,8 @@ const Products = () => {
     },
     {
       title: "Thể loại",
-      dataIndex: "category",
-      key: "category",
+      dataIndex: "categories",
+      key: "categories",
     },
     {
       title: "Giá bán",
