@@ -51,7 +51,7 @@ const LoginPage = () => {
               type="text"
               {...register("username")}
               style={styles.input}
-              placeholder="Nhập tên đăng nhập"
+              placeholder="admin"
             />
             {errors.username && (
               <p style={styles.errorText}>{errors.username.message}</p>
@@ -64,7 +64,7 @@ const LoginPage = () => {
               type="password"
               {...register("password")}
               style={styles.input}
-              placeholder="Nhập mật khẩu"
+              placeholder="1"
             />
             {errors.password && (
               <p style={styles.errorText}>{errors.password.message}</p>
