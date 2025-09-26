@@ -22,7 +22,6 @@ import { BiSolidCategory } from "react-icons/bi";
 
 // Import các component pages
 import Products from "./Products";
-import Categories from "./Categories";
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("products");
@@ -54,8 +53,8 @@ const DashboardPage = () => {
     switch (activeTab) {
       case "products":
         return <Products />;
-      case "categories":
-        return <Categories />;
+      // case "categories":
+      //   return <Categories />;
       default:
         return <div className="p-6">Chức năng đang được phát triển...</div>;
     }
