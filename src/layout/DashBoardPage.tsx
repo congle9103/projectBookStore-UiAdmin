@@ -21,7 +21,7 @@ import {
 import { BiSolidCategory } from "react-icons/bi";
 
 // Import các component pages
-import Products from "./Products";
+import Products from "../pages/Products";
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("products");

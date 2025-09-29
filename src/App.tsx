@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import DashboardPage from "./pages/DashBoardPage";
-import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./layout/DashBoardPage";
+import LoginPage from "./auth/LoginPage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();
