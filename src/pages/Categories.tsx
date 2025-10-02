@@ -34,7 +34,9 @@ const fetchCategories = async ({ queryKey }: { queryKey: QueryKey }) => {
 const Categories = () => {
   const [category, setCategory] = useState<string | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<ICategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<ICategory | null>(
+    null
+  );
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
 
@@ -108,6 +110,7 @@ const Categories = () => {
       key: "name",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
+    { title: "Slug", dataIndex: "slug", key: "slug" },
     {
       title: "Mô tả",
       dataIndex: "description",
