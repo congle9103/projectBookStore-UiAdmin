@@ -3,7 +3,6 @@ import { message } from "antd";
 import {
   FaBoxOpen,
   FaShoppingCart,
-  FaDollarSign,
   FaFileAlt,
   FaUsers,
   FaUserShield,
@@ -17,11 +16,18 @@ import {
   FaGlobe,
   FaCompass,
   FaUserTie,
+  FaTicketAlt,
 } from "react-icons/fa";
 import { BiSolidCategory } from "react-icons/bi";
 
 // Import các component pages
 import Products from "../pages/Products";
+import Categories from "../pages/Categories";
+import Orders from "../pages/Orders";
+import Customers from "../pages/Customers";
+import Voucher from "../pages/Vouchers";
+import Reviews from "../pages/Reviews";
+import Staffs from "../pages/Staffs";
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("products");
@@ -40,8 +46,8 @@ const DashboardPage = () => {
     { key: "categories", icon: <BiSolidCategory />, label: "Danh mục" },
     { key: "orders", icon: <FaShoppingCart />, label: "Đơn hàng" },
     { key: "customers", icon: <FaUsers />, label: "Khách hàng" },
-    { key: "staff", icon: <FaUserTie />, label: "Nhân viên" },
-    { key: "ads", icon: <FaDollarSign />, label: "Quảng cáo" },
+    { key: "staffs", icon: <FaUserTie />, label: "Nhân viên" },
+    { key: "voucher", icon: <FaTicketAlt />, label: "Voucher" },
     { key: "posts", icon: <FaFileAlt />, label: "Bài viết" },
     { key: "admin", icon: <FaUserShield />, label: "Quản trị" },
     { key: "settings", icon: <FaCog />, label: "Hệ thống" },
@@ -53,8 +59,18 @@ const DashboardPage = () => {
     switch (activeTab) {
       case "products":
         return <Products />;
-      // case "categories":
-      //   return <Categories />;
+      case "categories":
+        return <Categories />;
+      case "staffs":
+        return <Staffs />;
+      case "orders":
+        return <Orders />;
+      case "customers":
+        return <Customers />;
+      case "voucher":
+        return <Voucher />;
+      case "reviews":
+        return <Reviews />;
       default:
         return <div className="p-6">Chức năng đang được phát triển...</div>;
     }
