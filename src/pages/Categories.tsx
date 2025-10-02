@@ -11,12 +11,13 @@ import {
   Form,
   Row,
   Col,
+  Popconfirm,
+  message,
 } from "antd";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
 import type { ICategory } from "../types/catrgory.type";
-
 // Query key type
 type QueryKey = [string, { category?: string }];
 
@@ -25,15 +26,17 @@ const fetchCategories = async ({ queryKey }: { queryKey: QueryKey }) => {
   const [, { category }] = queryKey;
   const res = await axios.get(
     "https://projectbookstore-backendapi.onrender.com/api/v1/categories",
-    {
-      params: { category },
-    }
+    { params: { category } }
   );
   return res.data;
 };
 
 const Categories = () => {
   const [category, setCategory] = useState<string | undefined>();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ICategory | null>(null);
+  const [form] = Form.useForm();
+  const queryClient = useQueryClient();
 
   const {
     data: categories,
@@ -45,25 +48,56 @@ const Categories = () => {
     queryFn: fetchCategories,
   });
 
-  // State + Form
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form] = Form.useForm();
+  // === Add or Update Category ===
+  const handleSaveCategory = async () => {
+    try {
+      const values = await form.validateFields();
 
-  const handleAddCategory = () => {
-    form.validateFields().then((values) => {
-      console.log("New category:", values);
+      if (editingCategory) {
+        // Update
+        await axios.put(
+          `https://projectbookstore-backendapi.onrender.com/api/v1/categories/${editingCategory._id}`,
+          values
+        );
+        message.success("Cập nhật thể loại thành công");
+      } else {
+        // Create
+        await axios.post(
+          "https://projectbookstore-backendapi.onrender.com/api/v1/categories",
+          values
+        );
+        message.success("Thêm thể loại thành công");
+      }
+
       setIsModalOpen(false);
+      setEditingCategory(null);
       form.resetFields();
-      // TODO: axios.post("http://localhost:8080/api/v1/categories", values)
-    });
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    } catch (err) {
+      console.error(err);
+      message.error("Có lỗi xảy ra khi lưu thể loại");
+    }
   };
 
-  const handleEdit = (id: string) => {
-    console.log("Edit:", id);
+  // === Edit ===
+  const handleEdit = (record: ICategory) => {
+    setEditingCategory(record);
+    form.setFieldsValue(record);
+    setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    console.log("Delete:", id);
+  // === Delete ===
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(
+        `https://projectbookstore-backendapi.onrender.com/api/v1/categories/${id}`
+      );
+      message.success("Xóa thể loại thành công");
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+    } catch (err) {
+      console.error(err);
+      message.error("Có lỗi xảy ra khi xóa thể loại");
+    }
   };
 
   // Table columns
@@ -85,12 +119,17 @@ const Categories = () => {
       key: "action",
       render: (record: ICategory) => (
         <Space>
-          <Button type="primary" onClick={() => handleEdit(record._id!)}>
+          <Button type="primary" onClick={() => handleEdit(record)}>
             Edit
           </Button>
-          <Button danger onClick={() => handleDelete(record._id!)}>
-            Delete
-          </Button>
+          <Popconfirm
+            title="Bạn có chắc muốn xóa?"
+            okText="Xóa"
+            cancelText="Hủy"
+            onConfirm={() => handleDelete(record._id!)}
+          >
+            <Button danger>Delete</Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -132,7 +171,11 @@ const Categories = () => {
 
             <Button
               type="primary"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setIsModalOpen(true);
+                setEditingCategory(null);
+                form.resetFields();
+              }}
               className="ml-auto"
             >
               Add Category
@@ -144,17 +187,21 @@ const Categories = () => {
             rowKey="_id"
             columns={columns}
             dataSource={Array.isArray(categories?.data) ? categories.data : []}
+            pagination={{ pageSize: 5 }}
             scroll={{ x: true }}
           />
         </div>
       </main>
 
-      {/* Modal Add Category */}
+      {/* Modal Add/Edit Category */}
       <Modal
-        title="Thêm thể loại mới"
+        title={editingCategory ? "Chỉnh sửa thể loại" : "Thêm thể loại mới"}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
-        onOk={handleAddCategory}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setEditingCategory(null);
+        }}
+        onOk={handleSaveCategory}
         okText="Lưu"
         cancelText="Hủy"
         width={600}
