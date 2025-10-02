@@ -81,11 +81,6 @@ const Categories = () => {
       render: (desc: string) => desc || <Tag color="orange">Chưa có</Tag>,
     },
     {
-      title: "Slug",
-      dataIndex: "slug",
-      key: "slug",
-    },
-    {
       title: "Action",
       key: "action",
       render: (record: ICategory) => (
@@ -126,10 +121,12 @@ const Categories = () => {
               options={[
                 { value: "", label: "Tất cả thể loại" },
                 { value: "van-hoc", label: "Văn học" },
-                { value: "truyen-tranh", label: "Truyện tranh" },
                 { value: "tam-ly-ky-nang", label: "Tâm lý kỹ năng" },
+                { value: "lich-su-viet-nam", label: "Lịch sử Việt Nam" },
+                { value: "truyen-tranh", label: "Truyện tranh" },
                 { value: "thieu-nhi", label: "Thiếu nhi" },
                 { value: "ngoai-van", label: "Ngoại văn" },
+                { value: "sach-hoc-ngoai-ngu", label: "Sách học ngoại ngữ" },
               ]}
             />
 
@@ -147,7 +144,6 @@ const Categories = () => {
             rowKey="_id"
             columns={columns}
             dataSource={Array.isArray(categories?.data) ? categories.data : []}
-            pagination={{ pageSize: 5 }}
             scroll={{ x: true }}
           />
         </div>
