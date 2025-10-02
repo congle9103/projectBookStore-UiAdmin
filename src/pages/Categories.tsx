@@ -91,10 +91,13 @@ const Categories = () => {
       setEditingCategory(null);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
+
       if (axios.isAxiosError(err) && err.response?.data?.message) {
         message.error(err.response.data.message);
+      } else if (err instanceof Error) {
+        message.error(err.message);
       } else {
         message.error("Có lỗi xảy ra khi lưu thể loại");
       }
@@ -239,10 +242,8 @@ const Categories = () => {
               >
                 <Input
                   onChange={(e) => {
-                    if (!editingCategory) {
-                      const slug = generateSlug(e.target.value);
-                      form.setFieldValue("slug", slug);
-                    }
+                    const slug = generateSlug(e.target.value);
+                    form.setFieldValue("slug", slug);
                   }}
                 />
               </Form.Item>

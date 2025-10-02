@@ -2,7 +2,6 @@ import {
   Table,
   Image,
   Tag,
-  Spin,
   Alert,
   Select,
   Space,
@@ -13,68 +12,144 @@ import {
   Row,
   Col,
   Checkbox,
+  message,
+  Popconfirm,
 } from "antd";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
-import type { Product } from "../types/product.type";
+import type { Product, ProductResponse } from "../types/product.type";
 
-type QueryKey = [string, { sort?: string; category?: string }];
-
-// Fetch products
-const fetchProducts = async ({ queryKey }: { queryKey: QueryKey }) => {
+// API fetch products
+const fetchProducts = async ({ queryKey }: { queryKey: [string, { sort?: string; category?: string }] }) => {
   const [, { sort, category }] = queryKey;
-  const res = await axios.get("https://projectbookstore-backendapi.onrender.com/api/v1/products", {
-    params: { sort, category },
-  });
+  const res = await axios.get<ProductResponse>(
+    "https://projectbookstore-backendapi.onrender.com/api/v1/products",
+    {
+      params: { sort, category },
+    }
+  );
   return res.data;
 };
+
+// Hàm sinh slug từ tên
+const generateSlug = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 const Products = () => {
   const [sort, setSort] = useState<string | undefined>();
   const [category, setCategory] = useState<string | undefined>();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const [form] = Form.useForm();
+  const queryClient = useQueryClient();
+
+  // Query sản phẩm
   const {
     data: products,
-    isLoading,
     isError,
     error,
-  } = useQuery({
+    isFetching, // loading chỉ trong bảng
+  } = useQuery<ProductResponse>({
     queryKey: ["products", { sort, category }],
     queryFn: fetchProducts,
+    keepPreviousData: true,
   });
 
-  // State + Form
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [form] = Form.useForm();
+  // Save (Add hoặc Edit)
+  const handleSaveProduct = async () => {
+    try {
+      const values = await form.validateFields();
 
-  const handleAddProduct = () => {
-    form.validateFields().then((values) => {
-      console.log("New product:", values);
+      // Tự sinh slug nếu chưa nhập
+      if (!values.slug) {
+        values.slug = generateSlug(values.product_name);
+        form.setFieldValue("slug", values.slug);
+      }
+
+      // authors & thumbnails dạng chuỗi => mảng
+      if (typeof values.authors === "string") {
+        values.authors = values.authors.split(",").map((a: string) => a.trim());
+      }
+      if (typeof values.thumbnails === "string") {
+        values.thumbnails = values.thumbnails
+          .split(",")
+          .map((t: string) => t.trim());
+      }
+
+      if (editingProduct) {
+        // Update
+        await axios.put(
+          `https://projectbookstore-backendapi.onrender.com/api/v1/products/${editingProduct._id}`,
+          values
+        );
+        message.success("Cập nhật sản phẩm thành công");
+      } else {
+        // Add
+        await axios.post(
+          "https://projectbookstore-backendapi.onrender.com/api/v1/products",
+          values
+        );
+        message.success("Thêm sản phẩm thành công");
+      }
+
       setIsModalOpen(false);
+      setEditingProduct(null);
       form.resetFields();
-      // TODO: axios.post("http://localhost:8080/api/v1/products", values)
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (err: unknown) {
+      console.error(err);
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        message.error(err.response.data.message);
+      } else if (err instanceof Error) {
+        message.error(err.message);
+      } else {
+        message.error("Có lỗi xảy ra khi lưu sản phẩm");
+      }
+    }
+  };
+
+  // Edit
+  const handleEdit = (record: Product) => {
+    setEditingProduct(record);
+    form.setFieldsValue({
+      ...record,
+      authors: record.authors?.join(", "),
+      thumbnails: record.thumbnails?.join(", "),
     });
+    setIsModalOpen(true);
   };
 
-  const handleEdit = (id: string) => {
-    console.log("Edit:", id);
+  // Delete
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(
+        `https://projectbookstore-backendapi.onrender.com/api/v1/products/${id}`
+      );
+      message.success("Xóa sản phẩm thành công");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    } catch (err) {
+      console.error(err);
+      message.error("Có lỗi xảy ra khi xóa sản phẩm");
+    }
   };
 
-  const handleDelete = (id: string) => {
-    console.log("Delete:", id);
-  };
-
-  // Hàm tìm tên các sản phẩm
-  const normalizeText = (str: string) => {
-    return str
+  // Hàm tìm kiếm không dấu
+  const normalizeText = (str: string) =>
+    str
       .toLowerCase()
-      .normalize("NFD") // tách dấu khỏi ký tự
-      .replace(/[\u0300-\u036f]/g, "") // xóa dấu
-      .replace(/đ/g, "d") // thay đ → d
-      .replace(/[^a-z0-9\s]/g, ""); // bỏ ký tự đặc biệt (nếu cần)
-  };
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/[^a-z0-9\s]/g, "");
 
   // Table columns
   const columns = [
@@ -82,7 +157,7 @@ const Products = () => {
       title: "Ảnh",
       dataIndex: "thumbnails",
       key: "thumbnails",
-      render: (thumbs: string[]) => <Image src={thumbs[0]} width={60} />,
+      render: (thumbs: string[]) => <Image src={thumbs?.[0]} width={60} />,
     },
     {
       title: "Tên sản phẩm",
@@ -94,25 +169,21 @@ const Products = () => {
       title: "Tác giả",
       dataIndex: "authors",
       key: "authors",
-      render: (authors: string[]) => authors.join(", "),
+      render: (authors: string[]) => authors?.join(", "),
     },
-    {
-      title: "Nhà xuất bản",
-      dataIndex: "publisher",
-      key: "publisher",
-    },
+    { title: "NXB", dataIndex: "publisher", key: "publisher" },
     {
       title: "Giá bán",
       dataIndex: "price",
       key: "price",
-      render: (price: number) => <span>{price.toLocaleString()} đ</span>,
+      render: (price: number) => <span>{price?.toLocaleString()} đ</span>,
     },
     {
       title: "Giá gốc",
       dataIndex: "originalPrice",
       key: "originalPrice",
       render: (price: number) => (
-        <span className="line-through">{price.toLocaleString()} đ</span>
+        <span className="line-through">{price?.toLocaleString()} đ</span>
       ),
     },
     {
@@ -120,7 +191,7 @@ const Products = () => {
       dataIndex: "discountPercent",
       key: "discountPercent",
       render: (percent: number) => (
-        <Tag color={percent < 0 ? "red" : "green"}>{percent}%</Tag>
+        <Tag color={percent > 0 ? "green" : "red"}>{percent}%</Tag>
       ),
     },
     {
@@ -128,19 +199,23 @@ const Products = () => {
       key: "action",
       render: (record: Product) => (
         <Space>
-          <Button type="primary" onClick={() => handleEdit(record._id)}>
+          <Button type="primary" onClick={() => handleEdit(record)}>
             Edit
           </Button>
-          <Button danger onClick={() => handleDelete(record._id)}>
-            Delete
-          </Button>
+          <Popconfirm
+            title="Bạn có chắc muốn xóa sản phẩm này?"
+            onConfirm={() => handleDelete(record._id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button danger>Delete</Button>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  if (isLoading) return <Spin tip="Đang tải sản phẩm..." />;
-  if (isError) return <Alert type="error" message={error.message} />;
+  if (isError) return <Alert type="error" message={(error as Error).message} />;
 
   return (
     <div>
@@ -153,64 +228,84 @@ const Products = () => {
             <Search
               placeholder="Tìm sản phẩm"
               allowClear
-              enterButton // <- hiện nút Search mặc định
+              enterButton
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="
-              !w-120
-              [&_.ant-input-affix-wrapper]:!border-gray-500
-              [&_.ant-input]:placeholder-gray-500
-              [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white
-              [&_.ant-btn]:hover:!bg-blue-700
-            "
+              className="!w-120"
             />
 
             <Select
               placeholder="Lọc theo giá"
-              className="
-              !w-30
-              [&_.ant-select-selector]:!border-gray-600
-              [&_.ant-select-selector]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!text-gray-600
-            "
+              className=" !w-30 [&_.ant-select-selector]:!border-gray-600 [&_.ant-select-selector]:!font-semibold [&_.ant-select-selection-placeholder]:!font-semibold [&_.ant-select-selection-placeholder]:!text-gray-600 "
               value={sort}
-              onChange={(value) => setSort(value)} // cập nhật state sort
+              onChange={(value) => setSort(value)}
               options={[
-                { value: "", label: "Lọc theo giá" },
-                { value: "asc", label: "Thấp đến cao" },
-                { value: "desc", label: "Cao đến thấp" },
+                {
+                  value: "",
+                  label: <span className="font-semibold">Lọc theo giá</span>,
+                },
+                {
+                  value: "asc",
+                  label: <span className="font-semibold">Thấp đến cao</span>,
+                },
+                {
+                  value: "desc",
+                  label: <span className="font-semibold">Cao đến thấp</span>,
+                },
               ]}
             />
 
             <Select
               placeholder="Lọc theo thể loại"
-              className="
-              !w-40
-              [&_.ant-select-selector]:!border-gray-600
-              [&_.ant-select-selector]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!text-gray-600
-            "
+              className=" !w-40 [&_.ant-select-selector]:!border-gray-600 [&_.ant-select-selector]:!font-semibold [&_.ant-select-selection-placeholder]:!font-semibold [&_.ant-select-selection-placeholder]:!text-gray-600 "
               value={category}
-              onChange={(value) => setCategory(value)} // cập nhật state category
+              onChange={(value) => setCategory(value)}
               options={[
-                { value: "", label: "Tất cả thể loại" },
+                {
+                  value: "",
+                  label: <span className="font-semibold">Tất cả thể loại</span>,
+                },
                 {
                   value: "64f0c1e2a1234567890abc01",
-                  label: "Lịch sử Việt Nam",
+                  label: (
+                    <span className="font-semibold">Lịch sử Việt Nam</span>
+                  ),
                 },
-                { value: "68c4281d95425c0d0db09d4d", label: "Văn học" },
-                { value: "1", label: "Truyện tranh" },
-                { value: "2", label: "Tâm lý kỹ năng" },
-                { value: "3", label: "Thiếu nhi" },
-                { value: "4", label: "Sách học ngoại ngữ" },
-                { value: "5", label: "Ngoại văn" },
+                {
+                  value: "68c4281d95425c0d0db09d4d",
+                  label: <span className="font-semibold">Văn học</span>,
+                },
+                {
+                  value: "1",
+                  label: <span className="font-semibold">Truyện tranh</span>,
+                },
+                {
+                  value: "2",
+                  label: <span className="font-semibold">Tâm lý kỹ năng</span>,
+                },
+                {
+                  value: "3",
+                  label: <span className="font-semibold">Thiếu nhi</span>,
+                },
+                {
+                  value: "4",
+                  label: (
+                    <span className="font-semibold">Sách học ngoại ngữ</span>
+                  ),
+                },
+                {
+                  value: "5",
+                  label: <span className="font-semibold">Ngoại văn</span>,
+                },
               ]}
             />
 
             <Button
               type="primary"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setIsModalOpen(true);
+                setEditingProduct(null);
+                form.resetFields();
+              }}
               className="ml-auto"
             >
               Add Product
@@ -231,24 +326,28 @@ const Products = () => {
                 : []
             }
             pagination={{ pageSize: 5 }}
+            loading={isFetching} // chỉ loading bảng
             scroll={{ x: true }}
           />
         </div>
       </main>
 
-      {/* Modal Add Product */}
+      {/* Modal Add/Edit Product */}
       <Modal
-        title="Thêm sản phẩm mới"
+        title={editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
-        onOk={handleAddProduct}
+        onCancel={() => {
+          setIsModalOpen(false);
+          setEditingProduct(null);
+        }}
+        onOk={handleSaveProduct}
         okText="Lưu"
         cancelText="Hủy"
         width={800}
       >
+        {/* Giữ nguyên UI Form bạn gửi */}
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            {/* Cột trái */}
             <Col span={12}>
               <Form.Item
                 name="product_name"
@@ -258,12 +357,8 @@ const Products = () => {
                 <Input />
               </Form.Item>
 
-              <Form.Item
-                name="slug"
-                label="Slug"
-                rules={[{ required: true, message: "Nhập slug" }]}
-              >
-                <Input />
+              <Form.Item name="slug" label="Slug">
+                <Input placeholder="Tự sinh nếu để trống" />
               </Form.Item>
 
               <Form.Item
@@ -297,7 +392,6 @@ const Products = () => {
               </Form.Item>
             </Col>
 
-            {/* Cột phải */}
             <Col span={12}>
               <Form.Item name="thumbnails" label="Ảnh (URL)">
                 <Input.TextArea placeholder="Ngăn cách bởi dấu phẩy" rows={2} />
@@ -365,7 +459,6 @@ const Products = () => {
             </Col>
           </Row>
 
-          {/* Checkbox flags */}
           <Row gutter={16}>
             <Col>
               <Form.Item name="isNew" valuePropName="checked">

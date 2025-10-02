@@ -23,3 +23,9 @@ export interface Product {
   createdAt: string; // thường API trả ISO date string
   updatedAt: string;
 }
+
+export interface ProductResponse {
+  success: boolean;
+  data: Product[];
+}
+
