@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
 import type { ICategory } from "../types/catrgory.type";
+
 // Query key type
 type QueryKey = [string, { category?: string }];
 
@@ -30,6 +31,15 @@ const fetchCategories = async ({ queryKey }: { queryKey: QueryKey }) => {
   );
   return res.data;
 };
+
+// Hàm generate slug từ name
+const generateSlug = (text: string) =>
+  text
+    .toLowerCase()
+    .normalize("NFD") // tách dấu tiếng Việt
+    .replace(/[\u0300-\u036f]/g, "") // xóa dấu
+    .replace(/[^a-z0-9]+/g, "-") // thay ký tự đặc biệt = "-"
+    .replace(/^-+|-+$/g, ""); // xóa "-" ở đầu/cuối
 
 const Categories = () => {
   const [category, setCategory] = useState<string | undefined>();
@@ -55,6 +65,12 @@ const Categories = () => {
     try {
       const values = await form.validateFields();
 
+      // Nếu thêm mới mà không nhập slug -> tự sinh từ name
+      if (!editingCategory && !values.slug) {
+        values.slug = generateSlug(values.name);
+        form.setFieldValue("slug", values.slug);
+      }
+
       if (editingCategory) {
         // Update
         await axios.put(
@@ -75,9 +91,13 @@ const Categories = () => {
       setEditingCategory(null);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      message.error("Có lỗi xảy ra khi lưu thể loại");
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
+        message.error(err.response.data.message);
+      } else {
+        message.error("Có lỗi xảy ra khi lưu thể loại");
+      }
     }
   };
 
@@ -217,7 +237,14 @@ const Categories = () => {
                 label="Tên thể loại"
                 rules={[{ required: true, message: "Nhập tên thể loại" }]}
               >
-                <Input />
+                <Input
+                  onChange={(e) => {
+                    if (!editingCategory) {
+                      const slug = generateSlug(e.target.value);
+                      form.setFieldValue("slug", slug);
+                    }
+                  }}
+                />
               </Form.Item>
             </Col>
           </Row>
