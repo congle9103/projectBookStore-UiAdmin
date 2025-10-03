@@ -12,28 +12,45 @@ import {
   Col,
   message,
   Popconfirm,
+  Descriptions,
+  List,
 } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
 import type { Order, OrderResponse } from "../types/order.type";
+import { set } from "react-hook-form";
 
 // Fetch Orders
-const fetchOrders = async ({ queryKey }: { queryKey: [string, { status?: string }] }) => {
-  const [, { status }] = queryKey;
+const fetchOrders = async ({
+  queryKey,
+}: {
+  queryKey: [
+    string,
+    { status?: string; minAmount?: number; maxAmount?: number }
+  ];
+}) => {
+  const [, { status, minAmount, maxAmount }] = queryKey;
   const res = await axios.get<OrderResponse>(
     "https://projectbookstore-backendapi.onrender.com/api/v1/orders",
-    { params: { status } }
+    {
+      params: { status, minAmount, maxAmount },
+    }
   );
   return res.data;
 };
 
 const Orders = () => {
   const [status, setStatus] = useState<string | undefined>();
+  const [minAmount, setMinAmount] = useState<number | undefined>();
+  const [maxAmount, setMaxAmount] = useState<number | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
@@ -44,12 +61,12 @@ const Orders = () => {
     error,
     isFetching,
   } = useQuery<OrderResponse>({
-    queryKey: ["orders", { status }],
+    queryKey: ["orders", { status, minAmount, maxAmount }],
     queryFn: fetchOrders,
     keepPreviousData: true,
   });
 
-  // Save Order (edit only, add order thường làm ở backend checkout)
+  // Save Order (edit only)
   const handleSaveOrder = async () => {
     try {
       const values = await form.validateFields();
@@ -80,6 +97,7 @@ const Orders = () => {
     setEditingOrder(record);
     form.setFieldsValue(record);
     setIsModalOpen(true);
+    setIsDetailModalOpen(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -106,22 +124,22 @@ const Orders = () => {
   const columns = [
     {
       title: "Khách hàng",
-      dataIndex: ["customer", "name"],
+      dataIndex: ["customer", "full_name"],
       key: "customer",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
       title: "Nhân viên",
-      dataIndex: ["staff", "name"],
+      dataIndex: ["staff", "full_name"],
       key: "staff",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
+    { title: "Người nhận", dataIndex: "recipient_name", key: "recipient_name" },
     {
-      title: "Người nhận",
-      dataIndex: "recipient_name",
-      key: "recipient_name",
+      title: "Điện thoại",
+      dataIndex: "recipient_phone",
+      key: "recipient_phone",
     },
-    { title: "Điện thoại", dataIndex: "recipient_phone", key: "recipient_phone" },
     { title: "Thành phố", dataIndex: "city", key: "city" },
     {
       title: "Trạng thái",
@@ -149,7 +167,13 @@ const Orders = () => {
       key: "action",
       render: (record: Order) => (
         <Space>
-          <Button type="primary" onClick={() => handleEdit(record)}>
+          <Button
+            type="primary"
+            onClick={(e) => {
+              handleEdit(record);
+              e.stopPropagation(); // Ngăn click lan ra row
+            }}
+          >
             Edit
           </Button>
           <Popconfirm
@@ -179,7 +203,7 @@ const Orders = () => {
               allowClear
               enterButton
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="!w-120"
+              className="!w-100"
             />
 
             <Select
@@ -196,6 +220,32 @@ const Orders = () => {
                 { value: "cancelled", label: "Đã hủy" },
               ]}
             />
+
+            <Input
+              type="text"
+              placeholder="Min Amount"
+              style={{ width: 140 }}
+              value={minAmount?.toLocaleString("vi-VN") || ""}
+              onChange={(e) => {
+                const rawValue = e.target.value
+                  .replace(/,/g, "")
+                  .replace(/\./g, "");
+                setMinAmount(rawValue ? Number(rawValue) : undefined);
+              }}
+            />
+
+            <Input
+              type="text"
+              placeholder="Max Amount"
+              style={{ width: 140 }}
+              value={maxAmount?.toLocaleString("vi-VN") || ""}
+              onChange={(e) => {
+                const rawValue = e.target.value
+                  .replace(/,/g, "")
+                  .replace(/\./g, "");
+                setMaxAmount(rawValue ? Number(rawValue) : undefined);
+              }}
+            />
           </div>
 
           <Table
@@ -205,7 +255,7 @@ const Orders = () => {
               Array.isArray(orders?.data)
                 ? orders.data.filter(
                     (o: Order) =>
-                      normalizeText(o.customer?.name || "").includes(
+                      normalizeText(o.customer?.full_name || "").includes(
                         normalizeText(searchTerm)
                       ) ||
                       normalizeText(o.recipient_name).includes(
@@ -217,6 +267,13 @@ const Orders = () => {
             pagination={{ pageSize: 5 }}
             loading={isFetching}
             scroll={{ x: true }}
+            onRow={(record) => ({
+              onClick: () => {
+                setSelectedOrder(record);
+                setIsDetailModalOpen(true);
+              },
+              style: { cursor: "pointer" },
+            })}
           />
         </div>
       </main>
@@ -239,6 +296,10 @@ const Orders = () => {
             <Col span={12}>
               <Form.Item name="status" label="Trạng thái">
                 <Select
+                  disabled={
+                    editingOrder?.status === "completed" ||
+                    editingOrder?.status === "cancelled"
+                  }
                   options={[
                     { value: "pending", label: "Chờ xử lý" },
                     { value: "processing", label: "Đang xử lý" },
@@ -249,27 +310,72 @@ const Orders = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item name="payment_method" label="Thanh toán">
-                <Select
-                  options={[
-                    { value: "cash_on_delivery", label: "COD" },
-                    { value: "zalopay", label: "ZaloPay" },
-                    { value: "vnpay", label: "VNPay" },
-                    { value: "shopeepay", label: "ShopeePay" },
-                    { value: "momo", label: "Momo" },
-                    { value: "atm", label: "ATM" },
-                    { value: "visa", label: "Visa" },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
           </Row>
 
           <Form.Item name="notes" label="Ghi chú">
             <Input.TextArea rows={3} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal Chi tiết đơn hàng */}
+      <Modal
+        title={`Chi tiết đơn hàng #${selectedOrder?._id}`}
+        open={isDetailModalOpen}
+        onCancel={() => setIsDetailModalOpen(false)}
+        footer={null}
+        width={800}
+      >
+        {selectedOrder && (
+          <>
+            <Descriptions bordered column={2}>
+              <Descriptions.Item label="Khách hàng">
+                {selectedOrder.customer?.full_name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Nhân viên">
+                {selectedOrder.staff?.full_name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Người nhận">
+                {selectedOrder.recipient_name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Điện thoại">
+                {selectedOrder.recipient_phone}
+              </Descriptions.Item>
+              <Descriptions.Item label="Địa chỉ" span={2}>
+                {selectedOrder.shipping_address}, {selectedOrder.city}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag>{selectedOrder.status}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Thanh toán">
+                {selectedOrder.payment_method}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tổng tiền" span={2}>
+                {selectedOrder.total_amount.toLocaleString()} đ
+              </Descriptions.Item>
+              {selectedOrder.notes && (
+                <Descriptions.Item label="Ghi chú" span={2}>
+                  {selectedOrder.notes}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            <h4 className="mt-4 mb-2 font-semibold">Danh sách sản phẩm:</h4>
+            <List
+              dataSource={selectedOrder.items}
+              renderItem={(item) => (
+                <List.Item>
+                  <div className="flex justify-between w-full">
+                    <span>
+                      {item.product?.product_name} x {item.quantity}
+                    </span>
+                    <span>{item.total.toLocaleString()} đ</span>
+                  </div>
+                </List.Item>
+              )}
+            />
+          </>
+        )}
       </Modal>
     </div>
   );
