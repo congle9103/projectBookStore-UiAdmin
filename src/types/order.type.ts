@@ -45,3 +45,11 @@ export interface OrderResponse {
   data: Order[];
   total: number;
 }
+
+// Khai báo type cho params
+export type OrderQueryParams = {
+  status?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  search?: string;
+};

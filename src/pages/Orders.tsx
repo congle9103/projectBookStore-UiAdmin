@@ -15,25 +15,21 @@ import {
   Descriptions,
   List,
 } from "antd";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryFunction } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
-import type { Order, OrderResponse } from "../types/order.type";
+import type { Order, OrderQueryParams, OrderResponse } from "../types/order.type";
 
 // Fetch Orders
-const fetchOrders = async ({
-  queryKey,
-}: {
-  queryKey: [
-    string,
-    { status?: string; minAmount?: number; maxAmount?: number; search?: string }
-  ];
-}) => {
+const fetchOrders: QueryFunction<
+  OrderResponse,
+  [string, OrderQueryParams]
+> = async ({ queryKey }) => {
   const [, { status, minAmount, maxAmount, search }] = queryKey;
 
   // Chỉ giữ lại param nào có giá trị thật sự
-  const params: Record<string, any> = {};
+  const params: Record<string, unknown> = {};
   if (status && status.trim() !== "") params.status = status;
   if (minAmount !== undefined) params.minAmount = minAmount;
   if (maxAmount !== undefined) params.maxAmount = maxAmount;
@@ -65,10 +61,9 @@ const Orders = () => {
     isError,
     error,
     isFetching,
-  } = useQuery<OrderResponse>({
+  } = useQuery<OrderResponse, Error, OrderResponse, [string, OrderQueryParams]>({
     queryKey: ["orders", { status, minAmount, maxAmount, search: searchTerm }],
     queryFn: fetchOrders,
-    keepPreviousData: true,
   });
 
   // Save Order (edit only)
@@ -118,13 +113,14 @@ const Orders = () => {
     }
   };
 
-  const normalizeText = (str: string) =>
-    str
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/đ/g, "d")
-      .replace(/[^a-z0-9\s]/g, "");
+  // Lọc bỏ dấu tiếng Việt, ký tự đặc biệt, chuyển về chữ thường
+  // const normalizeText = (str: string) =>
+  //   str
+  //     .toLowerCase()
+  //     .normalize("NFD")
+  //     .replace(/[\u0300-\u036f]/g, "")
+  //     .replace(/đ/g, "d")
+  //     .replace(/[^a-z0-9\s]/g, "");
 
   const columns = [
     {
@@ -327,10 +323,10 @@ const Orders = () => {
           <>
             <Descriptions bordered column={2}>
               <Descriptions.Item label="Khách hàng">
-                {selectedOrder.customer?.full_name}
+                {selectedOrder.customer?.name}
               </Descriptions.Item>
               <Descriptions.Item label="Nhân viên">
-                {selectedOrder.staff?.full_name}
+                {selectedOrder.staff?.name}
               </Descriptions.Item>
               <Descriptions.Item label="Người nhận">
                 {selectedOrder.recipient_name}

@@ -20,9 +20,10 @@ import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
 import type { Product, ProductResponse } from "../types/product.type";
+import type { QueryFunction } from "@tanstack/react-query";
 
 // API fetch products
-const fetchProducts = async ({ queryKey }: { queryKey: [string, { sort?: string; category?: string }] }) => {
+const fetchProducts: QueryFunction<ProductResponse, [string, { sort?: string; category?: string }]> = async ({ queryKey }) => {
   const [, { sort, category }] = queryKey;
   const res = await axios.get<ProductResponse>(
     "https://projectbookstore-backendapi.onrender.com/api/v1/products",
@@ -54,15 +55,14 @@ const Products = () => {
 
   // Query sản phẩm
   const {
-    data: products,
-    isError,
-    error,
-    isFetching, // loading chỉ trong bảng
-  } = useQuery<ProductResponse>({
-    queryKey: ["products", { sort, category }],
-    queryFn: fetchProducts,
-    keepPreviousData: true,
-  });
+  data: products,
+  isError,
+  error,
+  isFetching,
+} = useQuery({
+  queryKey: ["products", { sort, category }],
+  queryFn: fetchProducts,
+});
 
   // Save (Add hoặc Edit)
   const handleSaveProduct = async () => {
