@@ -31,11 +31,17 @@ const fetchOrders = async ({
   ];
 }) => {
   const [, { status, minAmount, maxAmount, search }] = queryKey;
+
+  // Chỉ giữ lại param nào có giá trị thật sự
+  const params: Record<string, any> = {};
+  if (status && status.trim() !== "") params.status = status;
+  if (minAmount !== undefined) params.minAmount = minAmount;
+  if (maxAmount !== undefined) params.maxAmount = maxAmount;
+  if (search && search.trim() !== "") params.search = search;
+
   const res = await axios.get<OrderResponse>(
     "https://projectbookstore-backendapi.onrender.com/api/v1/orders",
-    {
-      params: { status, minAmount, maxAmount, search },
-    }
+    { params }
   );
   return res.data;
 };
@@ -209,7 +215,7 @@ const Orders = () => {
               placeholder="Lọc theo trạng thái"
               className="!w-40"
               value={status}
-              onChange={(value) => setStatus(value)}
+              onChange={(value) => setStatus(value || undefined)} // nếu "" → set undefined
               options={[
                 { value: "", label: "Tất cả" },
                 { value: "pending", label: "Chờ xử lý" },
@@ -228,7 +234,9 @@ const Orders = () => {
                 minAmount !== undefined ? minAmount.toLocaleString("vi-VN") : ""
               }
               onChange={(e) => {
-                const rawValue = e.target.value.replace(/,/g, "").replace(/\./g, "");
+                const rawValue = e.target.value
+                  .replace(/,/g, "")
+                  .replace(/\./g, "");
                 setMinAmount(rawValue !== "" ? Number(rawValue) : undefined);
               }}
             />
@@ -241,7 +249,9 @@ const Orders = () => {
                 maxAmount !== undefined ? maxAmount.toLocaleString("vi-VN") : ""
               }
               onChange={(e) => {
-                const rawValue = e.target.value.replace(/,/g, "").replace(/\./g, "");
+                const rawValue = e.target.value
+                  .replace(/,/g, "")
+                  .replace(/\./g, "");
                 setMaxAmount(rawValue !== "" ? Number(rawValue) : undefined);
               }}
             />
