@@ -28,14 +28,14 @@ const fetchOrders = async ({
 }: {
   queryKey: [
     string,
-    { status?: string; minAmount?: number; maxAmount?: number }
+    { status?: string; minAmount?: number; maxAmount?: number; search?: string }
   ];
 }) => {
-  const [, { status, minAmount, maxAmount }] = queryKey;
+  const [, { status, minAmount, maxAmount, search }] = queryKey;
   const res = await axios.get<OrderResponse>(
     "https://projectbookstore-backendapi.onrender.com/api/v1/orders",
     {
-      params: { status, minAmount, maxAmount },
+      params: { status, minAmount, maxAmount, search },
     }
   );
   return res.data;
@@ -45,7 +45,7 @@ const Orders = () => {
   const [status, setStatus] = useState<string | undefined>();
   const [minAmount, setMinAmount] = useState<number | undefined>();
   const [maxAmount, setMaxAmount] = useState<number | undefined>();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(""); // search realtime
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
@@ -61,7 +61,7 @@ const Orders = () => {
     error,
     isFetching,
   } = useQuery<OrderResponse>({
-    queryKey: ["orders", { status, minAmount, maxAmount }],
+    queryKey: ["orders", { status, minAmount, maxAmount, search: searchTerm }],
     queryFn: fetchOrders,
     keepPreviousData: true,
   });
@@ -201,8 +201,8 @@ const Orders = () => {
             <Search
               placeholder="Tìm theo tên khách / người nhận"
               allowClear
-              enterButton
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)} // gọi API ngay khi nhập
+              value={searchTerm}
               className="!w-100"
             />
 
@@ -225,12 +225,12 @@ const Orders = () => {
               type="text"
               placeholder="Min Amount"
               style={{ width: 140 }}
-              value={minAmount?.toLocaleString("vi-VN") || ""}
+              value={
+                minAmount !== undefined ? minAmount.toLocaleString("vi-VN") : ""
+              }
               onChange={(e) => {
-                const rawValue = e.target.value
-                  .replace(/,/g, "")
-                  .replace(/\./g, "");
-                setMinAmount(rawValue ? Number(rawValue) : undefined);
+                const rawValue = e.target.value.replace(/,/g, "").replace(/\./g, "");
+                setMinAmount(rawValue !== "" ? Number(rawValue) : undefined);
               }}
             />
 
@@ -238,12 +238,12 @@ const Orders = () => {
               type="text"
               placeholder="Max Amount"
               style={{ width: 140 }}
-              value={maxAmount?.toLocaleString("vi-VN") || ""}
+              value={
+                maxAmount !== undefined ? maxAmount.toLocaleString("vi-VN") : ""
+              }
               onChange={(e) => {
-                const rawValue = e.target.value
-                  .replace(/,/g, "")
-                  .replace(/\./g, "");
-                setMaxAmount(rawValue ? Number(rawValue) : undefined);
+                const rawValue = e.target.value.replace(/,/g, "").replace(/\./g, "");
+                setMaxAmount(rawValue !== "" ? Number(rawValue) : undefined);
               }}
             />
           </div>
@@ -251,19 +251,7 @@ const Orders = () => {
           <Table
             rowKey="_id"
             columns={columns}
-            dataSource={
-              Array.isArray(orders?.data)
-                ? orders.data.filter(
-                    (o: Order) =>
-                      normalizeText(o.customer?.full_name || "").includes(
-                        normalizeText(searchTerm)
-                      ) ||
-                      normalizeText(o.recipient_name).includes(
-                        normalizeText(searchTerm)
-                      )
-                  )
-                : []
-            }
+            dataSource={orders?.data || []} // BE đã lọc sẵn
             pagination={{ pageSize: 5 }}
             loading={isFetching}
             scroll={{ x: true }}
