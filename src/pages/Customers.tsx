@@ -13,120 +13,144 @@ import {
   Row,
   Col,
   Checkbox,
+  DatePicker,
 } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
-import type { Product } from "../types/product.type";
 
-type QueryKey = [string, { sort?: string; category?: string }];
+type QueryKey = [string, { sort?: string; city?: string }];
 
-// Fetch products
-const fetchProducts = async ({ queryKey }: { queryKey: QueryKey }) => {
-  const [, { sort, category }] = queryKey;
-  const res = await axios.get("https://projectbookstore-backendapi.onrender.com/api/v1/products", {
-    params: { sort, category },
-  });
+interface Customer {
+  _id: string;
+  username: string;
+  full_name: string;
+  avatar?: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  date_of_birth?: string;
+  gender?: "male" | "female" | "other";
+  point?: number;
+  is_active: boolean;
+  createdAt: string;
+}
+
+// Fetch customers
+const fetchCustomers = async ({ queryKey }: { queryKey: QueryKey }) => {
+  const [, { sort, city }] = queryKey;
+  const res = await axios.get(
+    "https://projectbookstore-backendapi.onrender.com/api/v1/customers",
+    { params: { sort, city } }
+  );
   return res.data;
 };
 
-const Products = () => {
+const Customers = () => {
   const [sort, setSort] = useState<string | undefined>();
-  const [category, setCategory] = useState<string | undefined>();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
+
   const {
-    data: products,
+    data: customers,
     isLoading,
     isError,
     error,
   } = useQuery({
-    queryKey: ["products", { sort, category }],
-    queryFn: fetchProducts,
+    queryKey: ["customers", { sort }],
+    queryFn: fetchCustomers,
   });
 
-  // State + Form
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [form] = Form.useForm();
+  // Normalize text for search
+  const normalizeText = (str: string) =>
+    str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/[^a-z0-9\s]/g, "");
 
-  const handleAddProduct = () => {
+  // CRUD Handlers
+  const handleAddCustomer = () => {
     form.validateFields().then((values) => {
-      console.log("New product:", values);
+      console.log("New customer:", values);
       setIsModalOpen(false);
       form.resetFields();
-      // TODO: axios.post("http://localhost:8080/api/v1/products", values)
+      // TODO: axios.post("/api/v1/customers", values)
     });
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit:", id);
+    console.log("Edit customer:", id);
   };
 
   const handleDelete = (id: string) => {
-    console.log("Delete:", id);
-  };
-
-  // Hàm tìm tên các sản phẩm
-  const normalizeText = (str: string) => {
-    return str
-      .toLowerCase()
-      .normalize("NFD") // tách dấu khỏi ký tự
-      .replace(/[\u0300-\u036f]/g, "") // xóa dấu
-      .replace(/đ/g, "d") // thay đ → d
-      .replace(/[^a-z0-9\s]/g, ""); // bỏ ký tự đặc biệt (nếu cần)
+    console.log("Delete customer:", id);
   };
 
   // Table columns
   const columns = [
     {
-      title: "Ảnh",
-      dataIndex: "thumbnails",
-      key: "thumbnails",
-      render: (thumbs: string[]) => <Image src={thumbs[0]} width={60} />,
+      title: "Ảnh đại diện",
+      dataIndex: "avatar",
+      key: "avatar",
+      render: (avatar: string) =>
+        avatar ? (
+          <Image src={avatar} width={50} height={50} style={{ borderRadius: "50%" }} />
+        ) : (
+          <Tag color="gray">No Avatar</Tag>
+        ),
     },
     {
-      title: "Tên sản phẩm",
-      dataIndex: "product_name",
-      key: "product_name",
+      title: "Tên đăng nhập",
+      dataIndex: "username",
+      key: "username",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
-      title: "Tác giả",
-      dataIndex: "authors",
-      key: "authors",
-      render: (authors: string[]) => authors.join(", "),
+      title: "Họ và tên",
+      dataIndex: "full_name",
+      key: "full_name",
     },
     {
-      title: "Nhà xuất bản",
-      dataIndex: "publisher",
-      key: "publisher",
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
     },
     {
-      title: "Giá bán",
-      dataIndex: "price",
-      key: "price",
-      render: (price: number) => <span>{price.toLocaleString()} đ</span>,
+      title: "Điện thoại",
+      dataIndex: "phone",
+      key: "phone",
     },
     {
-      title: "Giá gốc",
-      dataIndex: "originalPrice",
-      key: "originalPrice",
-      render: (price: number) => (
-        <span className="line-through">{price.toLocaleString()} đ</span>
-      ),
+      title: "Thành phố",
+      dataIndex: "city",
+      key: "city",
     },
     {
-      title: "Giảm giá",
-      dataIndex: "discountPercent",
-      key: "discountPercent",
-      render: (percent: number) => (
-        <Tag color={percent < 0 ? "red" : "green"}>{percent}%</Tag>
-      ),
+      title: "Điểm tích lũy",
+      dataIndex: "point",
+      key: "point",
+      render: (point: number) => <Tag color="blue">{point ?? 0}</Tag>,
     },
     {
-      title: "Action",
+      title: "Trạng thái",
+      dataIndex: "is_active",
+      key: "is_active",
+      render: (active: boolean) =>
+        active ? (
+          <Tag color="green">Hoạt động</Tag>
+        ) : (
+          <Tag color="red">Khoá</Tag>
+        ),
+    },
+    {
+      title: "Thao tác",
       key: "action",
-      render: (record: Product) => (
+      render: (record: Customer) => (
         <Space>
           <Button type="primary" onClick={() => handleEdit(record._id)}>
             Edit
@@ -139,7 +163,7 @@ const Products = () => {
     },
   ];
 
-  if (isLoading) return <Spin tip="Đang tải sản phẩm..." />;
+  if (isLoading) return <Spin tip="Đang tải danh sách khách hàng..." />;
   if (isError) return <Alert type="error" message={error.message} />;
 
   return (
@@ -148,73 +172,37 @@ const Products = () => {
         <div className="bg-white shadow-lg rounded-xl p-6">
           {/* Header filter */}
           <div className="flex items-center mb-4 gap-6">
-            <h3 className="text-lg font-semibold w-48">Danh sách sản phẩm:</h3>
+            <h3 className="text-lg font-semibold w-56">Danh sách khách hàng:</h3>
 
             <Search
-              placeholder="Tìm sản phẩm"
+              placeholder="Tìm kiếm khách hàng"
               allowClear
-              enterButton // <- hiện nút Search mặc định
+              enterButton
               onChange={(e) => setSearchTerm(e.target.value)}
               className="
-              !w-120
-              [&_.ant-input-affix-wrapper]:!border-gray-500
-              [&_.ant-input]:placeholder-gray-500
-              [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white
-              [&_.ant-btn]:hover:!bg-blue-700
-            "
+                !w-120
+                [&_.ant-input-affix-wrapper]:!border-gray-500
+                [&_.ant-input]:placeholder-gray-500
+                [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white
+                [&_.ant-btn]:hover:!bg-blue-700
+              "
             />
 
             <Select
-              placeholder="Lọc theo giá"
-              className="
-              !w-30
-              [&_.ant-select-selector]:!border-gray-600
-              [&_.ant-select-selector]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!text-gray-600
-            "
+              placeholder="Sắp xếp theo điểm"
               value={sort}
-              onChange={(value) => setSort(value)} // cập nhật state sort
+              onChange={(value) => setSort(value)}
               options={[
-                { value: "", label: "Lọc theo giá" },
+                { value: "", label: "Mặc định" },
                 { value: "asc", label: "Thấp đến cao" },
                 { value: "desc", label: "Cao đến thấp" },
               ]}
+              className="!w-44 [&_.ant-select-selector]:!border-gray-600 [&_.ant-select-selector]:!font-semibold [&_.ant-select-selection-placeholder]:!font-semibold [&_.ant-select-selection-placeholder]:!text-gray-600"
             />
 
-            <Select
-              placeholder="Lọc theo thể loại"
-              className="
-              !w-40
-              [&_.ant-select-selector]:!border-gray-600
-              [&_.ant-select-selector]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!text-gray-600
-            "
-              value={category}
-              onChange={(value) => setCategory(value)} // cập nhật state category
-              options={[
-                { value: "", label: "Tất cả thể loại" },
-                {
-                  value: "64f0c1e2a1234567890abc01",
-                  label: "Lịch sử Việt Nam",
-                },
-                { value: "68c4281d95425c0d0db09d4d", label: "Văn học" },
-                { value: "1", label: "Truyện tranh" },
-                { value: "2", label: "Tâm lý kỹ năng" },
-                { value: "3", label: "Thiếu nhi" },
-                { value: "4", label: "Sách học ngoại ngữ" },
-                { value: "5", label: "Ngoại văn" },
-              ]}
-            />
-
-            <Button
-              type="primary"
-              onClick={() => setIsModalOpen(true)}
-              className="ml-auto"
-            >
-              Add Product
-            </Button>
+            <Button type="primary" onClick={() => setIsModalOpen(true)} className="ml-auto">
+              Thêm khách hàng
+            </Button> 
           </div>
 
           {/* Table */}
@@ -222,9 +210,9 @@ const Products = () => {
             rowKey="_id"
             columns={columns}
             dataSource={
-              Array.isArray(products?.data)
-                ? products.data.filter((p: Product) =>
-                    normalizeText(p.product_name).includes(
+              Array.isArray(customers?.data)
+                ? customers.data.filter((c: Customer) =>
+                    normalizeText(c.full_name + c.username + c.email).includes(
                       normalizeText(searchTerm)
                     )
                   )
@@ -236,150 +224,89 @@ const Products = () => {
         </div>
       </main>
 
-      {/* Modal Add Product */}
+      {/* Modal Add Customer */}
       <Modal
-        title="Thêm sản phẩm mới"
+        title="Thêm khách hàng mới"
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        onOk={handleAddProduct}
+        onOk={handleAddCustomer}
         okText="Lưu"
         cancelText="Hủy"
-        width={800}
+        width={700}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            {/* Cột trái */}
             <Col span={12}>
               <Form.Item
-                name="product_name"
-                label="Tên sản phẩm"
-                rules={[{ required: true, message: "Nhập tên sản phẩm" }]}
+                name="username"
+                label="Tên đăng nhập"
+                rules={[{ required: true, message: "Nhập tên đăng nhập" }]}
               >
                 <Input />
               </Form.Item>
 
               <Form.Item
-                name="slug"
-                label="Slug"
-                rules={[{ required: true, message: "Nhập slug" }]}
+                name="password"
+                label="Mật khẩu"
+                rules={[{ required: true, message: "Nhập mật khẩu" }]}
+              >
+                <Input.Password />
+              </Form.Item>
+
+              <Form.Item
+                name="full_name"
+                label="Họ và tên"
+                rules={[{ required: true, message: "Nhập họ tên" }]}
               >
                 <Input />
               </Form.Item>
 
               <Form.Item
-                name="category_id"
-                label="Thể loại"
-                rules={[{ required: true, message: "Chọn thể loại" }]}
+                name="email"
+                label="Email"
+                rules={[{ required: true, type: "email", message: "Nhập email hợp lệ" }]}
               >
+                <Input />
+              </Form.Item>
+
+              <Form.Item name="phone" label="Số điện thoại">
+                <Input />
+              </Form.Item>
+
+              <Form.Item name="gender" label="Giới tính">
                 <Select
                   options={[
-                    { value: "650f5c4a3a...", label: "Lịch sử Việt Nam" },
-                    { value: "650f5c4a3b...", label: "Truyện tranh" },
-                    { value: "650f5c4a3c...", label: "Văn học" },
-                    { value: "650f5c4a3d...", label: "Tâm lý kỹ năng" },
-                    { value: "650f5c4a3e...", label: "Thiếu nhi" },
-                    { value: "650f5c4a3f...", label: "Sách học ngoại ngữ" },
-                    { value: "650f5c4a40...", label: "Ngoại văn" },
+                    { value: "male", label: "Nam" },
+                    { value: "female", label: "Nữ" },
+                    { value: "other", label: "Khác" },
                   ]}
                 />
               </Form.Item>
-
-              <Form.Item name="supplier" label="Nhà cung cấp">
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="publisher" label="Nhà xuất bản">
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="authors" label="Tác giả">
-                <Input.TextArea placeholder="Ngăn cách bởi dấu phẩy" rows={2} />
-              </Form.Item>
             </Col>
 
-            {/* Cột phải */}
             <Col span={12}>
-              <Form.Item name="thumbnails" label="Ảnh (URL)">
-                <Input.TextArea placeholder="Ngăn cách bởi dấu phẩy" rows={2} />
-              </Form.Item>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item
-                    name="price"
-                    label="Giá bán"
-                    rules={[{ required: true }]}
-                  >
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="originalPrice" label="Giá gốc">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item name="discountPercent" label="Giảm giá (%)">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="publicationYear" label="Năm XB">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item name="language" label="Ngôn ngữ">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="weight" label="Trọng lượng (gr)">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item name="dimensions" label="Kích thước">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="pages" label="Số trang">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item name="format" label="Hình thức">
+              <Form.Item name="avatar" label="Ảnh đại diện (URL)">
                 <Input />
               </Form.Item>
-            </Col>
-          </Row>
 
-          {/* Checkbox flags */}
-          <Row gutter={16}>
-            <Col>
-              <Form.Item name="isNew" valuePropName="checked">
-                <Checkbox>Mới</Checkbox>
+              <Form.Item name="address" label="Địa chỉ">
+                <Input />
               </Form.Item>
-            </Col>
-            <Col>
-              <Form.Item name="isPopular" valuePropName="checked">
-                <Checkbox>Phổ biến</Checkbox>
+
+              <Form.Item name="city" label="Thành phố">
+                <Input />
               </Form.Item>
-            </Col>
-            <Col>
-              <Form.Item name="isFlashSale" valuePropName="checked">
-                <Checkbox>Flash Sale</Checkbox>
+
+              <Form.Item name="date_of_birth" label="Ngày sinh">
+                <DatePicker className="w-full" format="YYYY-MM-DD" />
+              </Form.Item>
+
+              <Form.Item name="point" label="Điểm tích lũy">
+                <Input type="number" />
+              </Form.Item>
+
+              <Form.Item name="is_active" valuePropName="checked">
+                <Checkbox>Đang hoạt động</Checkbox>
               </Form.Item>
             </Col>
           </Row>
@@ -389,4 +316,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default Customers;

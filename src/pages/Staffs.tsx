@@ -1,6 +1,5 @@
 import {
   Table,
-  Image,
   Tag,
   Spin,
   Alert,
@@ -13,120 +12,145 @@ import {
   Row,
   Col,
   Checkbox,
+  DatePicker,
 } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
-import type { Product } from "../types/product.type";
 
-type QueryKey = [string, { sort?: string; category?: string }];
+type QueryKey = [string, { sort?: string; role?: string }];
 
-// Fetch products
-const fetchProducts = async ({ queryKey }: { queryKey: QueryKey }) => {
-  const [, { sort, category }] = queryKey;
-  const res = await axios.get("http://localhost:8080/api/v1/products", {
-    params: { sort, category },
-  });
+interface Staff {
+  _id: string;
+  username: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  role: "admin" | "dev";
+  salary?: number;
+  hire_date?: string;
+  is_active: boolean;
+  createdAt: string;
+}
+
+// Fetch staffs
+const fetchStaffs = async ({ queryKey }: { queryKey: QueryKey }) => {
+  const [, { sort, role }] = queryKey;
+  const res = await axios.get(
+    "https://projectbookstore-backendapi.onrender.com/api/v1/staffs",
+    { params: { sort, role } }
+  );
   return res.data;
 };
 
-const Products = () => {
+const Staffs = () => {
   const [sort, setSort] = useState<string | undefined>();
-  const [category, setCategory] = useState<string | undefined>();
+  const [role, setRole] = useState<string | undefined>();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
+
   const {
-    data: products,
+    data: staffs,
     isLoading,
     isError,
     error,
   } = useQuery({
-    queryKey: ["products", { sort, category }],
-    queryFn: fetchProducts,
+    queryKey: ["staffs", { sort, role }],
+    queryFn: fetchStaffs,
   });
 
-  // State + Form
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [form] = Form.useForm();
+  // Normalize text
+  const normalizeText = (str: string) =>
+    str
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/[^a-z0-9\s]/g, "");
 
-  const handleAddProduct = () => {
+  // CRUD Handlers
+  const handleAddStaff = () => {
     form.validateFields().then((values) => {
-      console.log("New product:", values);
+      console.log("New staff:", values);
       setIsModalOpen(false);
       form.resetFields();
-      // TODO: axios.post("http://localhost:8080/api/v1/products", values)
+      // TODO: axios.post("/api/v1/staffs", values)
     });
   };
 
   const handleEdit = (id: string) => {
-    console.log("Edit:", id);
+    console.log("Edit staff:", id);
   };
 
   const handleDelete = (id: string) => {
-    console.log("Delete:", id);
+    console.log("Delete staff:", id);
   };
 
-  // Hàm tìm tên các sản phẩm
-  const normalizeText = (str: string) => {
-    return str
-      .toLowerCase()
-      .normalize("NFD") // tách dấu khỏi ký tự
-      .replace(/[\u0300-\u036f]/g, "") // xóa dấu
-      .replace(/đ/g, "d") // thay đ → d
-      .replace(/[^a-z0-9\s]/g, ""); // bỏ ký tự đặc biệt (nếu cần)
-  };
-
-  // Table columns
+  // Columns
   const columns = [
     {
-      title: "Ảnh",
-      dataIndex: "thumbnails",
-      key: "thumbnails",
-      render: (thumbs: string[]) => <Image src={thumbs[0]} width={60} />,
-    },
-    {
-      title: "Tên sản phẩm",
-      dataIndex: "product_name",
-      key: "product_name",
+      title: "Tên đăng nhập",
+      dataIndex: "username",
+      key: "username",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
-      title: "Tác giả",
-      dataIndex: "authors",
-      key: "authors",
-      render: (authors: string[]) => authors.join(", "),
+      title: "Họ và tên",
+      dataIndex: "full_name",
+      key: "full_name",
     },
     {
-      title: "Nhà xuất bản",
-      dataIndex: "publisher",
-      key: "publisher",
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
     },
     {
-      title: "Giá bán",
-      dataIndex: "price",
-      key: "price",
-      render: (price: number) => <span>{price.toLocaleString()} đ</span>,
+      title: "Điện thoại",
+      dataIndex: "phone",
+      key: "phone",
     },
     {
-      title: "Giá gốc",
-      dataIndex: "originalPrice",
-      key: "originalPrice",
-      render: (price: number) => (
-        <span className="line-through">{price.toLocaleString()} đ</span>
-      ),
+      title: "Vai trò",
+      dataIndex: "role",
+      key: "role",
+      render: (role: string) =>
+        role === "admin" ? (
+          <Tag color="red">Admin</Tag>
+        ) : (
+          <Tag color="blue">Dev</Tag>
+        ),
     },
     {
-      title: "Giảm giá",
-      dataIndex: "discountPercent",
-      key: "discountPercent",
-      render: (percent: number) => (
-        <Tag color={percent < 0 ? "red" : "green"}>{percent}%</Tag>
-      ),
+      title: "Lương (VNĐ)",
+      dataIndex: "salary",
+      key: "salary",
+      render: (salary: number) =>
+        salary ? <span>{salary.toLocaleString()} đ</span> : "-",
     },
     {
-      title: "Action",
+      title: "Ngày tuyển dụng",
+      dataIndex: "hire_date",
+      key: "hire_date",
+      render: (date: string) =>
+        date ? new Date(date).toLocaleDateString("vi-VN") : "-",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "is_active",
+      key: "is_active",
+      render: (active: boolean) =>
+        active ? (
+          <Tag color="green">Hoạt động</Tag>
+        ) : (
+          <Tag color="gray">Khoá</Tag>
+        ),
+    },
+    {
+      title: "Thao tác",
       key: "action",
-      render: (record: Product) => (
+      render: (record: Staff) => (
         <Space>
           <Button type="primary" onClick={() => handleEdit(record._id)}>
             Edit
@@ -139,73 +163,53 @@ const Products = () => {
     },
   ];
 
-  if (isLoading) return <Spin tip="Đang tải sản phẩm..." />;
+  if (isLoading) return <Spin tip="Đang tải danh sách nhân viên..." />;
   if (isError) return <Alert type="error" message={error.message} />;
 
   return (
     <div>
       <main className="flex-1 p-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
-          {/* Header filter */}
+          {/* Header */}
           <div className="flex items-center mb-4 gap-6">
-            <h3 className="text-lg font-semibold w-48">Danh sách sản phẩm:</h3>
+            <h3 className="text-lg font-semibold w-44">Danh sách nhân viên:</h3>
 
             <Search
-              placeholder="Tìm sản phẩm"
+              placeholder="Tìm kiếm nhân viên"
               allowClear
-              enterButton // <- hiện nút Search mặc định
+              enterButton
               onChange={(e) => setSearchTerm(e.target.value)}
               className="
-              !w-120
-              [&_.ant-input-affix-wrapper]:!border-gray-500
-              [&_.ant-input]:placeholder-gray-500
-              [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white
-              [&_.ant-btn]:hover:!bg-blue-700
-            "
+                !w-100
+                [&_.ant-input-affix-wrapper]:!border-gray-500
+                [&_.ant-input]:placeholder-gray-500
+                [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white
+                [&_.ant-btn]:hover:!bg-blue-700
+              "
             />
 
             <Select
-              placeholder="Lọc theo giá"
-              className="
-              !w-30
-              [&_.ant-select-selector]:!border-gray-600
-              [&_.ant-select-selector]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!text-gray-600
-            "
+              placeholder="Sắp xếp theo lương"
               value={sort}
-              onChange={(value) => setSort(value)} // cập nhật state sort
+              onChange={(value) => setSort(value)}
               options={[
-                { value: "", label: "Lọc theo giá" },
+                { value: "", label: "Mặc định" },
                 { value: "asc", label: "Thấp đến cao" },
                 { value: "desc", label: "Cao đến thấp" },
               ]}
+              className="!w-44 [&_.ant-select-selector]:!border-gray-600 [&_.ant-select-selector]:!font-semibold [&_.ant-select-selection-placeholder]:!font-semibold [&_.ant-select-selection-placeholder]:!text-gray-600"
             />
 
             <Select
-              placeholder="Lọc theo thể loại"
-              className="
-              !w-40
-              [&_.ant-select-selector]:!border-gray-600
-              [&_.ant-select-selector]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!font-semibold
-              [&_.ant-select-selection-placeholder]:!text-gray-600
-            "
-              value={category}
-              onChange={(value) => setCategory(value)} // cập nhật state category
+              placeholder="Lọc theo vai trò"
+              value={role}
+              onChange={(value) => setRole(value)}
               options={[
-                { value: "", label: "Tất cả thể loại" },
-                {
-                  value: "64f0c1e2a1234567890abc01",
-                  label: "Lịch sử Việt Nam",
-                },
-                { value: "68c4281d95425c0d0db09d4d", label: "Văn học" },
-                { value: "1", label: "Truyện tranh" },
-                { value: "2", label: "Tâm lý kỹ năng" },
-                { value: "3", label: "Thiếu nhi" },
-                { value: "4", label: "Sách học ngoại ngữ" },
-                { value: "5", label: "Ngoại văn" },
+                { value: "", label: "Tất cả" },
+                { value: "admin", label: "Admin" },
+                { value: "dev", label: "Dev" },
               ]}
+              className="!w-40 [&_.ant-select-selector]:!border-gray-600 [&_.ant-select-selector]:!font-semibold [&_.ant-select-selection-placeholder]:!font-semibold [&_.ant-select-selection-placeholder]:!text-gray-600"
             />
 
             <Button
@@ -213,7 +217,7 @@ const Products = () => {
               onClick={() => setIsModalOpen(true)}
               className="ml-auto"
             >
-              Add Product
+              Thêm nhân viên
             </Button>
           </div>
 
@@ -222,9 +226,9 @@ const Products = () => {
             rowKey="_id"
             columns={columns}
             dataSource={
-              Array.isArray(products?.data)
-                ? products.data.filter((p: Product) =>
-                    normalizeText(p.product_name).includes(
+              Array.isArray(staffs?.data)
+                ? staffs.data.filter((s: Staff) =>
+                    normalizeText(s.username + s.full_name + s.email).includes(
                       normalizeText(searchTerm)
                     )
                   )
@@ -236,150 +240,80 @@ const Products = () => {
         </div>
       </main>
 
-      {/* Modal Add Product */}
+      {/* Modal Add Staff */}
       <Modal
-        title="Thêm sản phẩm mới"
+        title="Thêm nhân viên mới"
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        onOk={handleAddProduct}
+        onOk={handleAddStaff}
         okText="Lưu"
         cancelText="Hủy"
-        width={800}
+        width={700}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
-            {/* Cột trái */}
             <Col span={12}>
               <Form.Item
-                name="product_name"
-                label="Tên sản phẩm"
-                rules={[{ required: true, message: "Nhập tên sản phẩm" }]}
+                name="username"
+                label="Tên đăng nhập"
+                rules={[{ required: true, message: "Nhập tên đăng nhập" }]}
               >
                 <Input />
               </Form.Item>
 
               <Form.Item
-                name="slug"
-                label="Slug"
-                rules={[{ required: true, message: "Nhập slug" }]}
+                name="password"
+                label="Mật khẩu"
+                rules={[{ required: true, message: "Nhập mật khẩu" }]}
+              >
+                <Input.Password />
+              </Form.Item>
+
+              <Form.Item
+                name="full_name"
+                label="Họ và tên"
+                rules={[{ required: true, message: "Nhập họ tên" }]}
               >
                 <Input />
               </Form.Item>
 
               <Form.Item
-                name="category_id"
-                label="Thể loại"
-                rules={[{ required: true, message: "Chọn thể loại" }]}
+                name="email"
+                label="Email"
+                rules={[{ required: true, type: "email", message: "Nhập email hợp lệ" }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item name="phone" label="Số điện thoại">
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                name="role"
+                label="Vai trò"
+                rules={[{ required: true, message: "Chọn vai trò" }]}
               >
                 <Select
                   options={[
-                    { value: "650f5c4a3a...", label: "Lịch sử Việt Nam" },
-                    { value: "650f5c4a3b...", label: "Truyện tranh" },
-                    { value: "650f5c4a3c...", label: "Văn học" },
-                    { value: "650f5c4a3d...", label: "Tâm lý kỹ năng" },
-                    { value: "650f5c4a3e...", label: "Thiếu nhi" },
-                    { value: "650f5c4a3f...", label: "Sách học ngoại ngữ" },
-                    { value: "650f5c4a40...", label: "Ngoại văn" },
+                    { value: "admin", label: "Admin" },
+                    { value: "dev", label: "Dev" },
                   ]}
                 />
               </Form.Item>
 
-              <Form.Item name="supplier" label="Nhà cung cấp">
-                <Input />
+              <Form.Item name="salary" label="Lương (VNĐ)">
+                <Input type="number" />
               </Form.Item>
 
-              <Form.Item name="publisher" label="Nhà xuất bản">
-                <Input />
+              <Form.Item name="hire_date" label="Ngày tuyển dụng">
+                <DatePicker className="w-full" format="YYYY-MM-DD" />
               </Form.Item>
 
-              <Form.Item name="authors" label="Tác giả">
-                <Input.TextArea placeholder="Ngăn cách bởi dấu phẩy" rows={2} />
-              </Form.Item>
-            </Col>
-
-            {/* Cột phải */}
-            <Col span={12}>
-              <Form.Item name="thumbnails" label="Ảnh (URL)">
-                <Input.TextArea placeholder="Ngăn cách bởi dấu phẩy" rows={2} />
-              </Form.Item>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item
-                    name="price"
-                    label="Giá bán"
-                    rules={[{ required: true }]}
-                  >
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="originalPrice" label="Giá gốc">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item name="discountPercent" label="Giảm giá (%)">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="publicationYear" label="Năm XB">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item name="language" label="Ngôn ngữ">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="weight" label="Trọng lượng (gr)">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item name="dimensions" label="Kích thước">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="pages" label="Số trang">
-                    <Input type="number" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item name="format" label="Hình thức">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          {/* Checkbox flags */}
-          <Row gutter={16}>
-            <Col>
-              <Form.Item name="isNew" valuePropName="checked">
-                <Checkbox>Mới</Checkbox>
-              </Form.Item>
-            </Col>
-            <Col>
-              <Form.Item name="isPopular" valuePropName="checked">
-                <Checkbox>Phổ biến</Checkbox>
-              </Form.Item>
-            </Col>
-            <Col>
-              <Form.Item name="isFlashSale" valuePropName="checked">
-                <Checkbox>Flash Sale</Checkbox>
+              <Form.Item name="is_active" valuePropName="checked">
+                <Checkbox>Đang hoạt động</Checkbox>
               </Form.Item>
             </Col>
           </Row>
@@ -389,4 +323,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default Staffs;
