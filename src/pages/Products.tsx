@@ -55,7 +55,6 @@ const fetchProducts = async ({
   return res.data.products ? res.data : res.data.data;
 };
 
-
 // ========================================
 // 🔹 Component chính
 // ========================================
@@ -106,24 +105,51 @@ const Products = () => {
   const handleSaveProduct = async () => {
     try {
       const values = await form.validateFields();
+
+      // Chuẩn hóa dữ liệu trước khi gửi
+      const payload = {
+        ...values,
+        authors: values.authors
+          ? values.authors.split(",").map((a: string) => a.trim())
+          : [],
+        thumbnails: values.thumbnails
+          ? values.thumbnails.split(",").map((url: string) => url.trim())
+          : [],
+        slug:
+          values.product_name
+            ?.toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)+/g, "") || "",
+      };
+
       if (editingProduct) {
-        await axios.put(`${API_URL}/${editingProduct._id}`, values);
+        await axios.put(`${API_URL}/${editingProduct._id}`, payload);
         message.success("Cập nhật sản phẩm thành công");
       } else {
-        await axios.post(API_URL, values);
+        await axios.post(API_URL, payload);
         message.success("Thêm sản phẩm thành công");
       }
+
       setIsModalOpen(false);
       setEditingProduct(null);
       queryClient.invalidateQueries({ queryKey: ["products"] });
-    } catch (err) {
-      message.error("Có lỗi xảy ra khi lưu sản phẩm");
+    } catch (err: any) {
+      console.error(err);
+      message.error(
+        err.response?.data?.message || "Có lỗi xảy ra khi lưu sản phẩm"
+      );
     }
   };
 
   const handleEdit = (record: Product) => {
     setEditingProduct(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({
+      ...record,
+      authors: record.authors?.join(", "),
+      thumbnails: record.thumbnails?.join(", "),
+    });
     setIsModalOpen(true);
   };
 
@@ -211,7 +237,9 @@ const Products = () => {
       <div className="bg-white shadow-lg rounded-xl p-6">
         {/* Bộ lọc */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
-        <label className="text-lg font-semibold" htmlFor="">Danh sách sản phẩm:</label>
+          <label className="text-lg font-semibold" htmlFor="">
+            Danh sách sản phẩm:
+          </label>
           <Search
             placeholder="Tìm sản phẩm..."
             allowClear
@@ -284,7 +312,6 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Modal Add/Edit */}
       <Modal
         title={editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
         open={isModalOpen}
@@ -292,7 +319,7 @@ const Products = () => {
         onOk={handleSaveProduct}
         okText="Lưu"
         cancelText="Hủy"
-        width={700}
+        width={800}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
@@ -300,24 +327,73 @@ const Products = () => {
               <Form.Item
                 name="product_name"
                 label="Tên sản phẩm"
-                rules={[{ required: true }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên sản phẩm" },
+                ]}
               >
                 <Input />
               </Form.Item>
-              <Form.Item name="price" label="Giá">
+
+              <Form.Item
+                name="supplier"
+                label="Nhà cung cấp"
+                rules={[
+                  { required: true, message: "Vui lòng nhập nhà cung cấp" },
+                ]}
+              >
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                name="publisher"
+                label="Nhà xuất bản"
+                rules={[{ required: true, message: "Vui lòng nhập NXB" }]}
+              >
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                name="authors"
+                label="Tác giả (phân cách bằng dấu phẩy)"
+                rules={[{ required: true, message: "Vui lòng nhập tác giả" }]}
+              >
+                <Input />
+              </Form.Item>
+
+              <Form.Item
+                name="originalPrice"
+                label="Giá gốc"
+                rules={[{ required: true, message: "Vui lòng nhập giá gốc" }]}
+              >
                 <Input type="number" />
               </Form.Item>
+
               <Form.Item name="discountPercent" label="Giảm giá (%)">
                 <Input type="number" />
               </Form.Item>
-              <Form.Item name="category_id" label="Thể loại">
-                <Select />
+
+              <Form.Item
+                name="stock"
+                label="Số lượng tồn kho"
+                rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+              >
+                <Input type="number" />
               </Form.Item>
             </Col>
+
             <Col span={12}>
-              <Form.Item name="thumbnail" label="Ảnh (URL)">
-                <Input />
+              <Form.Item
+                name="thumbnails"
+                label="Ảnh (URL, phân cách bằng dấu phẩy)"
+                rules={[{ required: true, message: "Vui lòng nhập ảnh" }]}
+              >
+                <Input.TextArea placeholder="https://..." rows={3} />
               </Form.Item>
+
+              <Form.Item name="description" label="Mô tả">
+                <Input.TextArea rows={3} />
+              </Form.Item>
+
               <Form.Item name="isNew" valuePropName="checked">
                 <Checkbox>Mới</Checkbox>
               </Form.Item>
