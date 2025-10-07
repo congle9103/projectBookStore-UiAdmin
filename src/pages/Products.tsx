@@ -23,7 +23,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Product } from "../types/product.type";
 
-const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products?page=${page}&limit=${limit}`;
+const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products`;
 
 // ========================================
 // 🔹 Hàm gọi API backend (chuẩn service findAll)
@@ -32,8 +32,8 @@ const fetchProducts = async ({
   page = 1,
   limit = 5,
   keyword,
-  sort_by = "createdAt",
-  sort_type = "desc",
+  sort_by,
+  sort_type,
   cat_id,
 }: {
   page?: number;
@@ -43,12 +43,18 @@ const fetchProducts = async ({
   sort_type?: string;
   cat_id?: string;
 }) => {
-  const res = await axios.get(API_URL, {
-    params: { page, limit, keyword, sort_by, sort_type, cat_id },
-  });
-  if (res.data?.data) return res.data.data; // nếu dùng sendJsonSuccess
-  return res.data; // fallback nếu trả về trực tiếp
+  const params: any = { page, limit };
+
+  if (keyword) params.keyword = keyword;
+  if (sort_by) params.sort_by = sort_by;
+  if (sort_type) params.sort_type = sort_type;
+  if (cat_id) params.cat_id = cat_id;
+
+  const res = await axios.get(API_URL, { params });
+  if (res.data?.data?.products) return res.data.data;
+  return res.data.products ? res.data : res.data.data;
 };
+
 
 // ========================================
 // 🔹 Component chính
@@ -62,8 +68,8 @@ const Products = () => {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "5");
   const keyword = searchParams.get("keyword") || "";
-  const sort_by = searchParams.get("sort_by") || "createdAt";
-  const sort_type = searchParams.get("sort_type") || "desc";
+  const sort_by = searchParams.get("sort_by") || "";
+  const sort_type = searchParams.get("sort_type") || "";
   const cat_id = searchParams.get("cat_id") || "";
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -72,24 +78,20 @@ const Products = () => {
   // ========================================
   // 🔹 Gọi API qua React Query
   // ========================================
-  const {
-    data,
-    isError,
-    error,
-    isFetching,
-  } = useQuery({
+  const { data, isError, error, isFetching } = useQuery({
     queryKey: ["products", page, limit, keyword, sort_by, sort_type, cat_id],
-    queryFn: () => fetchProducts({ page, limit, keyword, sort_by, sort_type, cat_id }),
+    queryFn: () =>
+      fetchProducts({ page, limit, keyword, sort_by, sort_type, cat_id }),
   });
 
-  console.log("data", data);
-  
-  const products = data || [];
+  console.log("res.data", data);
 
   // ========================================
   // 🔹 Cập nhật query params (lọc, phân trang)
   // ========================================
-  const updateParams = (updates: Record<string, string | number | undefined>) => {
+  const updateParams = (
+    updates: Record<string, string | number | undefined>
+  ) => {
     const newParams = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === "") newParams.delete(key);
@@ -141,24 +143,29 @@ const Products = () => {
   const columns = [
     {
       title: "Ảnh",
-      dataIndex: "thumbnail",
-      key: "thumbnail",
-      render: (thumb: string) => (
-        <Image
-          src={
-            thumb?.startsWith("http")
-              ? thumb
-              : `${import.meta.env.VITE_BACKEND_URL_STATIC}/${thumb}`
-          }
-          width={60}
-        />
-      ),
+      dataIndex: "thumbnails",
+      key: "thumbnails",
+      render: (thumbs: string[] | string) => {
+        const thumb = Array.isArray(thumbs) ? thumbs[0] : thumbs;
+        return (
+          <Image
+            src={
+              thumb?.startsWith("http")
+                ? thumb
+                : `${import.meta.env.VITE_BACKEND_URL_STATIC}/${thumb}`
+            }
+            width={60}
+            height={60}
+            style={{ objectFit: "cover", borderRadius: 8 }}
+          />
+        );
+      },
     },
     { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
     {
-      title: "Giá",
-      dataIndex: "price",
-      key: "price",
+      title: "Giá gốc",
+      dataIndex: "originalPrice",
+      key: "originalPrice",
       render: (price: number) => `${price?.toLocaleString()} đ`,
     },
     {
@@ -168,6 +175,12 @@ const Products = () => {
       render: (percent: number) => (
         <Tag color={percent > 0 ? "green" : "red"}>{percent}%</Tag>
       ),
+    },
+    {
+      title: "Giá hiện tại",
+      dataIndex: "price",
+      key: "price",
+      render: (price: number) => `${price?.toLocaleString()} đ`,
     },
     {
       title: "Thao tác",
@@ -198,13 +211,14 @@ const Products = () => {
       <div className="bg-white shadow-lg rounded-xl p-6">
         {/* Bộ lọc */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
+        <label className="text-lg font-semibold" htmlFor="">Danh sách sản phẩm:</label>
           <Search
             placeholder="Tìm sản phẩm..."
             allowClear
             enterButton
             defaultValue={keyword}
             onSearch={(value) => updateParams({ keyword: value, page: 1 })}
-            className="!w-64"
+            className="!w-100"
           />
 
           <Select
@@ -227,7 +241,9 @@ const Products = () => {
             placeholder="Sắp xếp theo giá"
             className="!w-48"
             value={sort_type || undefined}
-            onChange={(value) => updateParams({ sort_type: value, sort_by: "price" })}
+            onChange={(value) =>
+              updateParams({ sort_type: value, sort_by: "price" })
+            }
             options={[
               { value: "asc", label: "Giá thấp → cao" },
               { value: "desc", label: "Giá cao → thấp" },
@@ -251,7 +267,7 @@ const Products = () => {
         <Table
           rowKey="_id"
           columns={columns}
-          dataSource={products}
+          dataSource={data?.products}
           loading={isFetching}
           pagination={false}
         />
