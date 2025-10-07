@@ -15,11 +15,12 @@ import {
   message,
   Popconfirm,
   Pagination,
+  InputNumber,
 } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Product } from "../types/product.type";
 
@@ -62,6 +63,7 @@ const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
+  const [categories, setCategories] = useState<[]>([]);
 
   // Lấy params từ URL
   const page = parseInt(searchParams.get("page") || "1");
@@ -98,6 +100,22 @@ const Products = () => {
     });
     setSearchParams(newParams);
   };
+
+  // 🔹 Fetch categories từ API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(
+          "https://projectbookstore-backendapi.onrender.com/api/v1/categories"
+        );
+        // Tùy response structure, có thể cần sửa:
+        setCategories(res.data.data || res.data || []);
+      } catch (err) {
+        console.error("❌ Lỗi khi load categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // ========================================
   // 🔹 Thêm / Sửa / Xóa sản phẩm
@@ -321,15 +339,33 @@ const Products = () => {
         cancelText="Hủy"
         width={800}
       >
-        <Form form={form} layout="vertical">
+        <Form layout="vertical" onFinish={handleSaveProduct}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="product_name"
-                label="Tên sản phẩm"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên sản phẩm" },
-                ]}
+                label="Tên sách"
+                rules={[{ required: true }]}
+              >
+                <Input placeholder="Nhập tên sách" />
+              </Form.Item>
+
+              <Form.Item name="slug" label="Slug" rules={[{ required: true }]}>
+                <Input placeholder="luoc-su-thoi-gian" />
+              </Form.Item>
+
+              <Form.Item
+                name="authors"
+                label="Tác giả"
+                rules={[{ required: true }]}
+              >
+                <Select mode="tags" placeholder="Nhập tên tác giả" />
+              </Form.Item>
+
+              <Form.Item
+                name="publisher"
+                label="Nhà xuất bản"
+                rules={[{ required: true }]}
               >
                 <Input />
               </Form.Item>
@@ -337,71 +373,113 @@ const Products = () => {
               <Form.Item
                 name="supplier"
                 label="Nhà cung cấp"
-                rules={[
-                  { required: true, message: "Vui lòng nhập nhà cung cấp" },
-                ]}
+                rules={[{ required: true }]}
               >
                 <Input />
               </Form.Item>
 
               <Form.Item
-                name="publisher"
-                label="Nhà xuất bản"
-                rules={[{ required: true, message: "Vui lòng nhập NXB" }]}
+                name="category_id"
+                label="Danh mục"
+                rules={[{ required: true }]}
               >
-                <Input />
+                <Select placeholder="Chọn danh mục">
+                  {categories.map((cat) => (
+                    <Select.Option key={cat._id} value={cat._id}>
+                      {cat.category_name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
 
               <Form.Item
-                name="authors"
-                label="Tác giả (phân cách bằng dấu phẩy)"
-                rules={[{ required: true, message: "Vui lòng nhập tác giả" }]}
+                name="description"
+                label="Mô tả"
+                rules={[{ required: true }]}
               >
-                <Input />
-              </Form.Item>
-
-              <Form.Item
-                name="originalPrice"
-                label="Giá gốc"
-                rules={[{ required: true, message: "Vui lòng nhập giá gốc" }]}
-              >
-                <Input type="number" />
-              </Form.Item>
-
-              <Form.Item name="discountPercent" label="Giảm giá (%)">
-                <Input type="number" />
-              </Form.Item>
-
-              <Form.Item
-                name="stock"
-                label="Số lượng tồn kho"
-                rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-              >
-                <Input type="number" />
+                <Input.TextArea rows={4} />
               </Form.Item>
             </Col>
 
             <Col span={12}>
               <Form.Item
-                name="thumbnails"
-                label="Ảnh (URL, phân cách bằng dấu phẩy)"
-                rules={[{ required: true, message: "Vui lòng nhập ảnh" }]}
+                name="price"
+                label="Giá bán"
+                rules={[{ required: true }]}
               >
-                <Input.TextArea placeholder="https://..." rows={3} />
+                <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="description" label="Mô tả">
-                <Input.TextArea rows={3} />
+              <Form.Item
+                name="originalPrice"
+                label="Giá gốc"
+                rules={[{ required: true }]}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+
+              <Form.Item
+                name="discountPercent"
+                label="Giảm giá (%)"
+                rules={[{ required: true }]}
+              >
+                <InputNumber min={0} max={100} style={{ width: "100%" }} />
+              </Form.Item>
+
+              <Form.Item
+                name="stock"
+                label="Tồn kho"
+                rules={[{ required: true }]}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+
+              <Form.Item name="publicationYear" label="Năm xuất bản">
+                <InputNumber min={1900} max={2025} style={{ width: "100%" }} />
+              </Form.Item>
+
+              <Form.Item name="pages" label="Số trang">
+                <InputNumber min={1} style={{ width: "100%" }} />
+              </Form.Item>
+
+              <Form.Item name="format" label="Định dạng bìa">
+                <Select>
+                  <Select.Option value="Bìa mềm">Bìa mềm</Select.Option>
+                  <Select.Option value="Bìa cứng">Bìa cứng</Select.Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item name="dimensions" label="Kích thước">
+                <Input placeholder="15x23x3cm" />
+              </Form.Item>
+
+              <Form.Item name="weight" label="Trọng lượng (gram)">
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+
+              <Form.Item name="thumbnails" label="Ảnh (URL)">
+                <Select mode="tags" placeholder="Dán link ảnh hoặc nhập URL" />
               </Form.Item>
 
               <Form.Item name="isNew" valuePropName="checked">
-                <Checkbox>Mới</Checkbox>
+                <Checkbox>Sách mới</Checkbox>
               </Form.Item>
+
               <Form.Item name="isPopular" valuePropName="checked">
-                <Checkbox>Phổ biến</Checkbox>
+                <Checkbox>Bán chạy</Checkbox>
+              </Form.Item>
+
+              <Form.Item name="isFlashSale" valuePropName="checked">
+                <Checkbox>Flash sale</Checkbox>
               </Form.Item>
             </Col>
           </Row>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              Tạo sách
+            </Button>
+          </Form.Item>
         </Form>
       </Modal>
     </div>
