@@ -339,25 +339,53 @@ const Products = () => {
         cancelText="Hủy"
         width={800}
       >
-        <Form layout="vertical" onFinish={handleSaveProduct}>
-          <Row gutter={16}>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            isNew: false,
+            isPopular: false,
+            isFlashSale: false,
+          }}
+        >
+          <Row gutter={[16, 0]}>
+            {/* Cột trái */}
             <Col span={12}>
               <Form.Item
                 name="product_name"
                 label="Tên sách"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Vui lòng nhập tên sách" }]}
               >
                 <Input placeholder="Nhập tên sách" />
               </Form.Item>
 
-              <Form.Item name="slug" label="Slug" rules={[{ required: true }]}>
-                <Input placeholder="luoc-su-thoi-gian" />
+              <Form.Item
+                name="slug"
+                label="Slug"
+                rules={[{ required: true, message: "Vui lòng nhập slug" }]}
+              >
+                <Input placeholder="Ví dụ: vu-tru-trong-hat-cat" />
+              </Form.Item>
+
+              <Form.Item
+                name="category_id"
+                label="Danh mục"
+                rules={[{ required: true, message: "Chọn danh mục" }]}
+              >
+                <Select
+                  placeholder="Chọn danh mục"
+                  loading={loading}
+                  options={categories.map((cat) => ({
+                    value: cat._id,
+                    label: cat.category_name,
+                  }))}
+                />
               </Form.Item>
 
               <Form.Item
                 name="authors"
                 label="Tác giả"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Nhập ít nhất 1 tác giả" }]}
               >
                 <Select mode="tags" placeholder="Nhập tên tác giả" />
               </Form.Item>
@@ -365,72 +393,46 @@ const Products = () => {
               <Form.Item
                 name="publisher"
                 label="Nhà xuất bản"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Nhập nhà xuất bản" }]}
               >
-                <Input />
+                <Input placeholder="Ví dụ: NXB Khoa Học" />
               </Form.Item>
 
               <Form.Item
                 name="supplier"
                 label="Nhà cung cấp"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Nhập nhà cung cấp" }]}
               >
-                <Input />
+                <Input placeholder="Ví dụ: NXB Trẻ" />
               </Form.Item>
 
-              <Form.Item
-                name="category_id"
-                label="Danh mục"
-                rules={[{ required: true }]}
-              >
-                <Select placeholder="Chọn danh mục">
-                  {categories.map((cat) => (
-                    <Select.Option key={cat._id} value={cat._id}>
-                      {cat.category_name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="description"
-                label="Mô tả"
-                rules={[{ required: true }]}
-              >
-                <Input.TextArea rows={4} />
+              <Form.Item name="description" label="Mô tả">
+                <Input.TextArea
+                  rows={4}
+                  placeholder="Mô tả ngắn về nội dung sách"
+                />
               </Form.Item>
             </Col>
 
+            {/* Cột phải */}
             <Col span={12}>
               <Form.Item
-                name="price"
-                label="Giá bán"
-                rules={[{ required: true }]}
-              >
-                <InputNumber min={0} style={{ width: "100%" }} />
-              </Form.Item>
-
-              <Form.Item
                 name="originalPrice"
-                label="Giá gốc"
-                rules={[{ required: true }]}
+                label="Giá gốc (VNĐ)"
+                rules={[{ required: true, message: "Nhập giá gốc" }]}
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item
-                name="discountPercent"
-                label="Giảm giá (%)"
-                rules={[{ required: true }]}
-              >
-                <InputNumber min={0} max={100} style={{ width: "100%" }} />
+              <Form.Item name="discountPercent" label="Giảm giá (%)">
+                <InputNumber min={0} max={90} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item
-                name="stock"
-                label="Tồn kho"
-                rules={[{ required: true }]}
-              >
+              <Form.Item name="price" label="Giá sau giảm (VNĐ)">
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+
+              <Form.Item name="stock" label="Tồn kho">
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
 
@@ -439,14 +441,18 @@ const Products = () => {
               </Form.Item>
 
               <Form.Item name="pages" label="Số trang">
-                <InputNumber min={1} style={{ width: "100%" }} />
+                <InputNumber min={1} max={3000} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="format" label="Định dạng bìa">
-                <Select>
-                  <Select.Option value="Bìa mềm">Bìa mềm</Select.Option>
-                  <Select.Option value="Bìa cứng">Bìa cứng</Select.Option>
-                </Select>
+              <Form.Item name="format" label="Định dạng">
+                <Select
+                  options={[
+                    { value: "Bìa mềm", label: "Bìa mềm" },
+                    { value: "Bìa cứng", label: "Bìa cứng" },
+                    { value: "Ebook", label: "Ebook" },
+                    { value: "Khác", label: "Khác" },
+                  ]}
+                />
               </Form.Item>
 
               <Form.Item name="dimensions" label="Kích thước">
@@ -458,28 +464,32 @@ const Products = () => {
               </Form.Item>
 
               <Form.Item name="thumbnails" label="Ảnh (URL)">
-                <Select mode="tags" placeholder="Dán link ảnh hoặc nhập URL" />
+                <Select
+                  mode="tags"
+                  placeholder="Nhập hoặc dán link ảnh"
+                  tokenSeparators={[","]}
+                />
               </Form.Item>
 
-              <Form.Item name="isNew" valuePropName="checked">
-                <Checkbox>Sách mới</Checkbox>
-              </Form.Item>
-
-              <Form.Item name="isPopular" valuePropName="checked">
-                <Checkbox>Bán chạy</Checkbox>
-              </Form.Item>
-
-              <Form.Item name="isFlashSale" valuePropName="checked">
-                <Checkbox>Flash sale</Checkbox>
-              </Form.Item>
+              <Row gutter={8}>
+                <Col span={8}>
+                  <Form.Item name="isNew" valuePropName="checked">
+                    <Checkbox>Mới</Checkbox>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="isPopular" valuePropName="checked">
+                    <Checkbox>Phổ biến</Checkbox>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="isFlashSale" valuePropName="checked">
+                    <Checkbox>Flash Sale</Checkbox>
+                  </Form.Item>
+                </Col>
+              </Row>
             </Col>
           </Row>
-
-          <Form.Item>
-            <Button type="primary" htmlType="submit">
-              Tạo sách
-            </Button>
-          </Form.Item>
         </Form>
       </Modal>
     </div>
