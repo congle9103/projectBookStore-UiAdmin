@@ -23,6 +23,7 @@ import Search from "antd/es/input/Search";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Product } from "../types/product.type";
+import type { ICategory } from "../types/catrgory.type";
 
 const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products`;
 
@@ -374,10 +375,8 @@ const Products = () => {
               >
                 <Select
                   placeholder="Chọn danh mục"
-                  loading={loading}
-                  options={categories.map((cat) => ({
-                    value: cat._id,
-                    label: cat.category_name,
+                  options={categories.map((cat: ICategory) => ({
+                    value: cat.name,
                   }))}
                 />
               </Form.Item>
@@ -387,7 +386,7 @@ const Products = () => {
                 label="Tác giả"
                 rules={[{ required: true, message: "Nhập ít nhất 1 tác giả" }]}
               >
-                <Select mode="tags" placeholder="Nhập tên tác giả" />
+                <Select placeholder="Nhập tên tác giả" />
               </Form.Item>
 
               <Form.Item
