@@ -323,10 +323,10 @@ const Products = () => {
         <div className="mt-4 text-right">
           <Pagination
             current={page}
-            total={20}
+            total={data?.totalRecords}
             pageSize={limit}
             onChange={(p) => updateParams({ page: p })}
-            showTotal={(t) => `Tổng ${t} sản phẩm`}
+            showTotal={data?.totalRecords ? (total) => `Tổng ${total} sản phẩm` : undefined}
           />
         </div>
       </div>
@@ -357,7 +357,20 @@ const Products = () => {
                 label="Tên sách"
                 rules={[{ required: true, message: "Vui lòng nhập tên sách" }]}
               >
-                <Input placeholder="Nhập tên sách" />
+                <Input
+                  placeholder="Nhập tên sách"
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    form.setFieldsValue({
+                      slug: name
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/(^-|-$)+/g, ""),
+                    });
+                  }}
+                />
               </Form.Item>
 
               <Form.Item
@@ -376,7 +389,8 @@ const Products = () => {
                 <Select
                   placeholder="Chọn danh mục"
                   options={categories.map((cat: ICategory) => ({
-                    value: cat.name,
+                    value: cat._id,
+                    label: cat.name,
                   }))}
                 />
               </Form.Item>
@@ -386,7 +400,7 @@ const Products = () => {
                 label="Tác giả"
                 rules={[{ required: true, message: "Nhập ít nhất 1 tác giả" }]}
               >
-                <Select placeholder="Nhập tên tác giả" />
+                <Input placeholder="Nhập tên tác giả" />
               </Form.Item>
 
               <Form.Item
@@ -448,8 +462,6 @@ const Products = () => {
                   options={[
                     { value: "Bìa mềm", label: "Bìa mềm" },
                     { value: "Bìa cứng", label: "Bìa cứng" },
-                    { value: "Ebook", label: "Ebook" },
-                    { value: "Khác", label: "Khác" },
                   ]}
                 />
               </Form.Item>
@@ -463,11 +475,7 @@ const Products = () => {
               </Form.Item>
 
               <Form.Item name="thumbnails" label="Ảnh (URL)">
-                <Select
-                  mode="tags"
-                  placeholder="Nhập hoặc dán link ảnh"
-                  tokenSeparators={[","]}
-                />
+                <Input placeholder="Nhập hoặc dán link ảnh" />
               </Form.Item>
 
               <Row gutter={8}>
