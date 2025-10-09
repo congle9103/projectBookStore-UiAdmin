@@ -28,7 +28,7 @@ import type { ICategory } from "../types/catrgory.type";
 const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products`;
 
 // ========================================
-// 🔹 Hàm gọi API backend (chuẩn service findAll)
+// 🔹 HÀM FETCH SẢN PHẨM
 // ========================================
 const fetchProducts = async ({
   page = 1,
@@ -58,13 +58,66 @@ const fetchProducts = async ({
 };
 
 // ========================================
-// 🔹 Component chính
+// 🔹 HÀM CREATE SẢN PHẨM
+// ========================================
+const createProduct = async (values: any) => {
+  const payload = {
+    ...values,
+    authors: values.authors
+      ? values.authors.split(",").map((a: string) => a.trim())
+      : [],
+    thumbnails: values.thumbnails
+      ? values.thumbnails.split(",").map((url: string) => url.trim())
+      : [],
+    slug:
+      values.product_name
+        ?.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "") || "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return axios.post(API_URL, payload);
+};
+
+// ========================================
+// 🔹 HÀM UPDATE SẢN PHẨM
+// ========================================
+const updateProduct = async (id: string, values: any) => {
+  const payload = {
+    ...values,
+    authors: values.authors
+      ? values.authors.split(",").map((a: string) => a.trim())
+      : [],
+    thumbnails: values.thumbnails
+      ? values.thumbnails.split(",").map((url: string) => url.trim())
+      : [],
+    slug:
+      values.product_name
+        ?.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "") || "",
+    updatedAt: new Date().toISOString(),
+  };
+
+  return axios.put(`${API_URL}/${id}`, payload);
+};
+
+// ========================================
+// 🔹 COMPONENT CHÍNH
 // ========================================
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
-  const [categories, setCategories] = useState<[]>([]);
+  const [categories, setCategories] = useState<ICategory[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Lấy params từ URL
   const page = parseInt(searchParams.get("page") || "1");
@@ -74,23 +127,14 @@ const Products = () => {
   const sort_type = searchParams.get("sort_type") || "";
   const cat_id = searchParams.get("cat_id") || "";
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-
-  // ========================================
-  // 🔹 Gọi API qua React Query
-  // ========================================
+  // Gọi API React Query
   const { data, isError, error, isFetching } = useQuery({
     queryKey: ["products", page, limit, keyword, sort_by, sort_type, cat_id],
     queryFn: () =>
       fetchProducts({ page, limit, keyword, sort_by, sort_type, cat_id }),
   });
 
-  console.log("res.data", data);
-
-  // ========================================
-  // 🔹 Cập nhật query params (lọc, phân trang)
-  // ========================================
+  // Hàm cập nhật params trên URL
   const updateParams = (
     updates: Record<string, string | number | undefined>
   ) => {
@@ -102,14 +146,13 @@ const Products = () => {
     setSearchParams(newParams);
   };
 
-  // 🔹 Fetch categories từ API
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get(
           "https://projectbookstore-backendapi.onrender.com/api/v1/categories"
         );
-        // Tùy response structure, có thể cần sửa:
         setCategories(res.data.data || res.data || []);
       } catch (err) {
         console.error("❌ Lỗi khi load categories:", err);
@@ -119,55 +162,36 @@ const Products = () => {
   }, []);
 
   // ========================================
-  // 🔹 Thêm / Sửa / Xóa sản phẩm
+  // 🔹 LƯU SẢN PHẨM (GỌI CREATE / UPDATE)
   // ========================================
   const handleSaveProduct = async () => {
     try {
       const values = await form.validateFields();
 
-      // Nếu đang thêm mới → đảm bảo không có _id
-      if (!editingProduct) {
-        delete values._id;
-        delete values.createdAt;
-        delete values.updatedAt;
-      }
-
-      const payload = {
-        ...values,
-        authors: values.authors
-          ? values.authors.split(",").map((a: string) => a.trim())
-          : [],
-        thumbnails: values.thumbnails
-          ? values.thumbnails.split(",").map((url: string) => url.trim())
-          : [],
-        slug:
-          values.product_name
-            ?.toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/(^-|-$)+/g, "") || "",
-      };
-
       if (editingProduct) {
-        await axios.put(`${API_URL}/${editingProduct._id}`, payload);
+        await updateProduct(editingProduct._id, values);
         message.success("Cập nhật sản phẩm thành công");
+        console.log("Cập nhật sản phẩm:", values);
+        
       } else {
-        await axios.post(API_URL, payload);
+        await createProduct(values);
         message.success("Thêm sản phẩm thành công");
+        console.log("Thêm sản phẩm:", values);
+        
       }
 
       setIsModalOpen(false);
       setEditingProduct(null);
       queryClient.invalidateQueries({ queryKey: ["products"] });
     } catch (err: any) {
-      console.error(err);
+      console.error("❌ Lỗi khi lưu sản phẩm:", err);
       message.error(
         err.response?.data?.message || "Có lỗi xảy ra khi lưu sản phẩm"
       );
     }
   };
 
+  // Chỉnh sửa
   const handleEdit = (record: Product) => {
     setEditingProduct(record);
     form.setFieldsValue({
@@ -178,6 +202,7 @@ const Products = () => {
     setIsModalOpen(true);
   };
 
+  // Xóa
   const handleDelete = async (id: string) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
@@ -189,7 +214,7 @@ const Products = () => {
   };
 
   // ========================================
-  // 🔹 Cấu hình cột bảng
+  // 🔹 CỘT BẢNG
   // ========================================
   const columns = [
     {
@@ -252,7 +277,8 @@ const Products = () => {
     },
   ];
 
-  if (isError) return <Alert type="error" message={(error as Error).message} />;
+  if (isError)
+    return <Alert type="error" message={(error as Error).message} />;
 
   // ========================================
   // 🔹 UI
@@ -262,7 +288,7 @@ const Products = () => {
       <div className="bg-white shadow-lg rounded-xl p-6">
         {/* Bộ lọc */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <label className="text-lg font-semibold" htmlFor="">
+          <label className="text-lg font-semibold">
             Danh sách sản phẩm:
           </label>
           <Search
@@ -341,6 +367,7 @@ const Products = () => {
         </div>
       </div>
 
+      {/* Modal Thêm / Sửa */}
       <Modal
         title={editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
         open={isModalOpen}
@@ -360,7 +387,6 @@ const Products = () => {
           }}
         >
           <Row gutter={[16, 0]}>
-            {/* Cột trái */}
             <Col span={12}>
               <Form.Item
                 name="product_name"
@@ -388,7 +414,7 @@ const Products = () => {
                 label="Slug"
                 rules={[{ required: true, message: "Vui lòng nhập slug" }]}
               >
-                <Input placeholder="Ví dụ: vu-tru-trong-hat-cat" />
+                <Input placeholder="vd: vu-tru-trong-hat-cat" />
               </Form.Item>
 
               <Form.Item
@@ -398,7 +424,7 @@ const Products = () => {
               >
                 <Select
                   placeholder="Chọn danh mục"
-                  options={categories.map((cat: ICategory) => ({
+                  options={categories.map((cat) => ({
                     value: cat._id,
                     label: cat.name,
                   }))}
@@ -418,7 +444,7 @@ const Products = () => {
                 label="Nhà xuất bản"
                 rules={[{ required: true, message: "Nhập nhà xuất bản" }]}
               >
-                <Input placeholder="Ví dụ: NXB Khoa Học" />
+                <Input placeholder="VD: NXB Khoa học" />
               </Form.Item>
 
               <Form.Item
@@ -426,7 +452,7 @@ const Products = () => {
                 label="Nhà cung cấp"
                 rules={[{ required: true, message: "Nhập nhà cung cấp" }]}
               >
-                <Input placeholder="Ví dụ: NXB Trẻ" />
+                <Input placeholder="VD: NXB Trẻ" />
               </Form.Item>
 
               <Form.Item name="description" label="Mô tả">
