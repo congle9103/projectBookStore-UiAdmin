@@ -76,8 +76,6 @@ const createProduct = async (values: any) => {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "") || "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   };
 
   return axios.post(API_URL, payload);
@@ -170,12 +168,10 @@ const Products = () => {
 
       if (editingProduct) {
         await updateProduct(editingProduct._id, values);
-        message.success("Cập nhật sản phẩm thành công");
         console.log("Cập nhật sản phẩm:", values);
         
       } else {
         await createProduct(values);
-        message.success("Thêm sản phẩm thành công");
         console.log("Thêm sản phẩm:", values);
         
       }
