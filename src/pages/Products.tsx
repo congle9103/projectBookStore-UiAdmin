@@ -125,7 +125,13 @@ const Products = () => {
     try {
       const values = await form.validateFields();
 
-      // Chuẩn hóa dữ liệu trước khi gửi
+      // Nếu đang thêm mới → đảm bảo không có _id
+      if (!editingProduct) {
+        delete values._id;
+        delete values.createdAt;
+        delete values.updatedAt;
+      }
+
       const payload = {
         ...values,
         authors: values.authors
@@ -326,7 +332,11 @@ const Products = () => {
             total={data?.totalRecords}
             pageSize={limit}
             onChange={(p) => updateParams({ page: p })}
-            showTotal={data?.totalRecords ? (total) => `Tổng ${total} sản phẩm` : undefined}
+            showTotal={
+              data?.totalRecords
+                ? (total) => `Tổng ${total} sản phẩm`
+                : undefined
+            }
           />
         </div>
       </div>
