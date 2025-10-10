@@ -23,7 +23,7 @@ import Search from "antd/es/input/Search";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Product } from "../types/product.type";
-import type { ICategory } from "../types/catrgory.type";
+import type { ICategory } from "../types/category.type";
 
 const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products`;
 
@@ -62,13 +62,25 @@ const fetchProducts = async ({
 // ========================================
 const createProduct = async (values: any) => {
   const payload = {
-    ...values,
+    // Không spread ...values trực tiếp nếu muốn tránh gửi trường thừa/không cần
+    product_name: values.product_name,
+    category_id: values.category_id,
+    supplier: values.supplier,
+    publisher: values.publisher,
     authors: values.authors
       ? values.authors.split(",").map((a: string) => a.trim())
       : [],
+    pages: values.pages,
+    publicationYear: values.publicationYear,
+    format: values.format,
+    dimensions: values.dimensions,
+    weight: values.weight,
     thumbnails: values.thumbnails
       ? values.thumbnails.split(",").map((url: string) => url.trim())
       : [],
+    originalPrice: values.originalPrice,
+    discountPercent: values.discountPercent,
+    stock: values.stock,
     slug:
       values.product_name
         ?.toLowerCase()
@@ -76,11 +88,16 @@ const createProduct = async (values: any) => {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "") || "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    description: values.description,
+    isNew: values.isNew,
+    isPopular: values.isPopular,
+    isFlashSale: values.isFlashSale,
+    // Không thêm createdAt/updatedAt ở đây – backend tự thêm
   };
 
-  return axios.post(API_URL, payload);
+  const response = await axios.post(API_URL, payload);
+  console.log("Create Response from Backend:", response.data); // Thêm log để thấy createdAt + updatedAt
+  return response.data; // Trả về data đầy đủ để sử dụng nếu cần
 };
 
 // ========================================

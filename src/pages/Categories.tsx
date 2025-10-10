@@ -1,9 +1,7 @@
 import {
   Table,
   Tag,
-  Spin,
   Alert,
-  Select,
   Space,
   Button,
   Input,
@@ -13,77 +11,124 @@ import {
   Col,
   Popconfirm,
   message,
+  Pagination,
 } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
-import type { ICategory } from "../types/catrgory.type";
+import { useSearchParams } from "react-router-dom";
+import type { ICategory } from "../types/category.type";
 
-// Query key type
-type QueryKey = [string, { category?: string }];
+const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/categories`;
 
-// Fetch categories
-const fetchCategories = async ({ queryKey }: { queryKey: QueryKey }) => {
-  const [, { category }] = queryKey;
-  const res = await axios.get(
-    "https://projectbookstore-backendapi.onrender.com/api/v1/categories",
-    { params: { category } }
-  );
-  return res.data;
+// ========================================
+// 🔹 FETCH CATEGORIES
+// ========================================
+const fetchCategories = async ({
+  page = 1,
+  limit = 5,
+  keyword,
+}: {
+  page?: number;
+  limit?: number;
+  keyword?: string;
+}) => {
+  const params: any = { page, limit };
+  if (keyword) params.keyword = keyword;
+
+  const res = await axios.get(API_URL, { params });
+  if (res.data?.data?.categories) return res.data.data;
+  return res.data.data || res.data;
 };
 
-// Hàm generate slug từ name
-const generateSlug = (text: string) =>
-  text
-    .toLowerCase()
-    .normalize("NFD") // tách dấu tiếng Việt
-    .replace(/[\u0300-\u036f]/g, "") // xóa dấu
-    .replace(/[^a-z0-9]+/g, "-") // thay ký tự đặc biệt = "-"
-    .replace(/^-+|-+$/g, ""); // xóa "-" ở đầu/cuối
+// ========================================
+// 🔹 CREATE CATEGORY
+// ========================================
+const createCategory = async (values: any) => {
+  const payload = {
+    name: values.name,
+    slug:
+      values.slug ||
+      values.name
+        ?.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, ""),
+    description: values.description,
+  };
+  return axios.post(API_URL, payload);
+};
 
+// ========================================
+// 🔹 UPDATE CATEGORY
+// ========================================
+const updateCategory = async (id: string, values: any) => {
+  const payload = {
+    name: values.name,
+    slug:
+      values.slug ||
+      values.name
+        ?.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, ""),
+    description: values.description,
+  };
+  return axios.put(`${API_URL}/${id}`, payload);
+};
+
+// ========================================
+// 🔹 DELETE CATEGORY
+// ========================================
+const deleteCategory = async (id: string) => {
+  return axios.delete(`${API_URL}/${id}`);
+};
+
+// ========================================
+// 🔹 COMPONENT CHÍNH
+// ========================================
 const Categories = () => {
-  const [category, setCategory] = useState<string | undefined>();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<ICategory | null>(
-    null
-  );
-  const [form] = Form.useForm();
   const queryClient = useQueryClient();
+  const [form] = Form.useForm();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ICategory | null>(null);
 
-  const {
-    data: categories,
-    isLoading,
-    isError,
-    error,
-  } = useQuery({
-    queryKey: ["categories", { category }],
-    queryFn: fetchCategories,
+  // URL Params
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = parseInt(searchParams.get("limit") || "5");
+  const keyword = searchParams.get("keyword") || "";
+
+  // Update params
+  const updateParams = (updates: Record<string, string | number | undefined>) => {
+    const newParams = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === "") newParams.delete(key);
+      else newParams.set(key, String(value));
+    });
+    setSearchParams(newParams);
+  };
+
+  // Fetch categories
+  const { data, isError, error, isFetching } = useQuery({
+    queryKey: ["categories", page, limit, keyword],
+    queryFn: () => fetchCategories({ page, limit, keyword }),
   });
 
-  // === Add or Update Category ===
-  const handleSaveCategory = async () => {
+  // ========================================
+  // 🔹 LƯU (CREATE / UPDATE)
+  // ========================================
+  const handleSave = async () => {
     try {
       const values = await form.validateFields();
 
-      // Nếu thêm mới mà không nhập slug -> tự sinh từ name
-      if (!editingCategory && !values.slug) {
-        values.slug = generateSlug(values.name);
-        form.setFieldValue("slug", values.slug);
-      }
-
       if (editingCategory) {
-        // Update
-        await axios.put(
-          `https://projectbookstore-backendapi.onrender.com/api/v1/categories/${editingCategory._id}`,
-          values
-        );
+        await updateCategory(editingCategory._id, values);
         message.success("Cập nhật thể loại thành công");
       } else {
-        // Create
-        await axios.post(
-          "https://projectbookstore-backendapi.onrender.com/api/v1/categories",
-          values
-        );
+        await createCategory(values);
         message.success("Thêm thể loại thành công");
       }
 
@@ -91,41 +136,39 @@ const Categories = () => {
       setEditingCategory(null);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error(err);
-
-      if (axios.isAxiosError(err) && err.response?.data?.message) {
-        message.error(err.response.data.message);
-      } else if (err instanceof Error) {
-        message.error(err.message);
-      } else {
-        message.error("Có lỗi xảy ra khi lưu thể loại");
-      }
+      message.error(
+        err.response?.data?.message || "Có lỗi xảy ra khi lưu thể loại"
+      );
     }
   };
 
-  // === Edit ===
+  // ========================================
+  // 🔹 EDIT
+  // ========================================
   const handleEdit = (record: ICategory) => {
     setEditingCategory(record);
     form.setFieldsValue(record);
     setIsModalOpen(true);
   };
 
-  // === Delete ===
+  // ========================================
+  // 🔹 DELETE
+  // ========================================
   const handleDelete = async (id: string) => {
     try {
-      await axios.delete(
-        `https://projectbookstore-backendapi.onrender.com/api/v1/categories/${id}`
-      );
+      await deleteCategory(id);
       message.success("Xóa thể loại thành công");
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-    } catch (err) {
-      console.error(err);
-      message.error("Có lỗi xảy ra khi xóa thể loại");
+    } catch {
+      message.error("Xóa thể loại thất bại");
     }
   };
 
-  // Table columns
+  // ========================================
+  // 🔹 CỘT BẢNG
+  // ========================================
   const columns = [
     {
       title: "Tên thể loại",
@@ -141,85 +184,82 @@ const Categories = () => {
       render: (desc: string) => desc || <Tag color="orange">Chưa có</Tag>,
     },
     {
-      title: "Action",
+      title: "Thao tác",
       key: "action",
       render: (record: ICategory) => (
         <Space>
           <Button type="primary" onClick={() => handleEdit(record)}>
-            Edit
+            Sửa
           </Button>
           <Popconfirm
             title="Bạn có chắc muốn xóa?"
-            okText="Xóa"
-            cancelText="Hủy"
             onConfirm={() => handleDelete(record._id!)}
           >
-            <Button danger>Delete</Button>
+            <Button danger>Xóa</Button>
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  if (isLoading) return <Spin tip="Đang tải thể loại..." />;
-  if (isError) return <Alert type="error" message={(error as Error).message} />;
+  if (isError)
+    return <Alert type="error" message={(error as Error).message} />;
 
+  // ========================================
+  // 🔹 UI
+  // ========================================
   return (
-    <div>
-      <main className="flex-1 p-6">
-        <div className="bg-white shadow-lg rounded-xl p-6">
-          {/* Header filter */}
-          <div className="flex items-center mb-4 gap-6">
-            <h3 className="text-lg font-semibold w-48">Danh sách thể loại:</h3>
+    <div className="p-6">
+      <div className="bg-white shadow-lg rounded-xl p-6">
+        {/* Bộ lọc */}
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <label className="text-lg font-semibold">
+            Danh sách thể loại:
+          </label>
+          <Input.Search
+            placeholder="Tìm thể loại..."
+            allowClear
+            enterButton
+            defaultValue={keyword}
+            onSearch={(value) => updateParams({ keyword: value, page: 1 })}
+            className="!w-80"
+          />
 
-            <Select
-              placeholder="Lọc theo thể loại"
-              className="
-                !w-40
-                [&_.ant-select-selector]:!border-gray-600
-                [&_.ant-select-selector]:!font-semibold
-                [&_.ant-select-selection-placeholder]:!font-semibold
-                [&_.ant-select-selection-placeholder]:!text-gray-600
-              "
-              value={category}
-              onChange={(value) => setCategory(value)}
-              options={[
-                { value: "", label: "Tất cả thể loại" },
-                { value: "van-hoc", label: "Văn học" },
-                { value: "tam-ly-ky-nang", label: "Tâm lý kỹ năng" },
-                { value: "lich-su-viet-nam", label: "Lịch sử Việt Nam" },
-                { value: "truyen-tranh", label: "Truyện tranh" },
-                { value: "thieu-nhi", label: "Thiếu nhi" },
-                { value: "ngoai-van", label: "Ngoại văn" },
-                { value: "sach-hoc-ngoai-ngu", label: "Sách học ngoại ngữ" },
-              ]}
-            />
+          <Button
+            type="primary"
+            className="ml-auto"
+            onClick={() => {
+              setIsModalOpen(true);
+              setEditingCategory(null);
+              form.resetFields();
+            }}
+          >
+            Thêm thể loại
+          </Button>
+        </div>
 
-            <Button
-              type="primary"
-              onClick={() => {
-                setIsModalOpen(true);
-                setEditingCategory(null);
-                form.resetFields();
-              }}
-              className="ml-auto"
-            >
-              Add Category
-            </Button>
-          </div>
+        {/* Bảng */}
+        <Table
+          rowKey="_id"
+          columns={columns}
+          dataSource={data?.categories || data?.data || []}
+          loading={isFetching}
+          pagination={false}
+        />
 
-          {/* Table */}
-          <Table
-            rowKey="_id"
-            columns={columns}
-            dataSource={Array.isArray(categories?.data) ? categories.data : []}
-            pagination={{ pageSize: 5 }}
-            scroll={{ x: true }}
+        {/* Phân trang */}
+        <div className="mt-4 text-right">
+          <Pagination
+            current={page}
+            total={data?.totalRecords || data?.total || 0}
+            pageSize={limit}
+            onChange={(p) => updateParams({ page: p })}
+            showTotal={(total) => `Tổng ${total} thể loại`}
           />
         </div>
-      </main>
+      </div>
 
-      {/* Modal Add/Edit Category */}
+      {/* Modal thêm / sửa */}
       <Modal
         title={editingCategory ? "Chỉnh sửa thể loại" : "Thêm thể loại mới"}
         open={isModalOpen}
@@ -227,7 +267,7 @@ const Categories = () => {
           setIsModalOpen(false);
           setEditingCategory(null);
         }}
-        onOk={handleSaveCategory}
+        onOk={handleSave}
         okText="Lưu"
         cancelText="Hủy"
         width={600}
@@ -241,31 +281,31 @@ const Categories = () => {
                 rules={[{ required: true, message: "Nhập tên thể loại" }]}
               >
                 <Input
+                  placeholder="Nhập tên thể loại"
                   onChange={(e) => {
-                    const slug = generateSlug(e.target.value);
-                    form.setFieldValue("slug", slug);
+                    const slug = e.target.value
+                      .toLowerCase()
+                      .normalize("NFD")
+                      .replace(/[\u0300-\u036f]/g, "")
+                      .replace(/[^a-z0-9]+/g, "-")
+                      .replace(/(^-|-$)+/g, "");
+                    form.setFieldsValue({ slug });
                   }}
                 />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={24}>
               <Form.Item
                 name="slug"
                 label="Slug"
                 rules={[{ required: true, message: "Nhập slug" }]}
               >
-                <Input />
+                <Input placeholder="vd: van-hoc" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={24}>
               <Form.Item name="description" label="Mô tả">
-                <Input.TextArea rows={3} />
+                <Input.TextArea rows={3} placeholder="Mô tả thể loại" />
               </Form.Item>
             </Col>
           </Row>
