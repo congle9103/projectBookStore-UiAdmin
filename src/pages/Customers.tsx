@@ -14,44 +14,33 @@ import {
   Col,
   Checkbox,
   DatePicker,
+  message,
 } from "antd";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
+import dayjs from "dayjs";
+import type { Customer } from "../types/customer.type";
 
-type QueryKey = [string, { sort?: string; city?: string }];
+type QueryKey = [string, { sort_type?: string; keyword?: string }];
 
-interface Customer {
-  _id: string;
-  username: string;
-  full_name: string;
-  avatar?: string;
-  email: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  date_of_birth?: string;
-  gender?: "male" | "female" | "other";
-  point?: number;
-  is_active: boolean;
-  createdAt: string;
-}
+const API_URL = "https://projectbookstore-backendapi.onrender.com/api/v1/customers";
 
-// Fetch customers
+// =============== FETCH LIST ===============
 const fetchCustomers = async ({ queryKey }: { queryKey: QueryKey }) => {
-  const [, { sort, city }] = queryKey;
-  const res = await axios.get(
-    "https://projectbookstore-backendapi.onrender.com/api/v1/customers",
-    { params: { sort, city } }
-  );
-  return res.data;
+  const [, { sort_type, keyword }] = queryKey;
+  const res = await axios.get(API_URL, { params: { sort_type, keyword } });
+  return res.data.data;
 };
 
 const Customers = () => {
-  const [sort, setSort] = useState<string | undefined>();
-  const [searchTerm, setSearchTerm] = useState("");
+  const queryClient = useQueryClient();
+
+  const [sort_type, setSortType] = useState<string>("desc");
+  const [keyword, setKeyword] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [form] = Form.useForm();
 
   const {
@@ -60,41 +49,75 @@ const Customers = () => {
     isError,
     error,
   } = useQuery({
-    queryKey: ["customers", { sort }],
+    queryKey: ["customers", { sort_type, keyword }],
     queryFn: fetchCustomers,
   });
 
-  // Normalize text for search
-  const normalizeText = (str: string) =>
-    str
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/đ/g, "d")
-      .replace(/[^a-z0-9\s]/g, "");
-
-  // CRUD Handlers
-  const handleAddCustomer = () => {
-    form.validateFields().then((values) => {
-      console.log("New customer:", values);
+  // =============== CRUD MUTATIONS ===============
+  const addMutation = useMutation({
+    mutationFn: (data: any) => axios.post(API_URL, data),
+    onSuccess: () => {
+      message.success("Thêm khách hàng thành công!");
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       setIsModalOpen(false);
-      form.resetFields();
-      // TODO: axios.post("/api/v1/customers", values)
+    },
+    onError: () => message.error("Lỗi khi thêm khách hàng!"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => axios.put(`${API_URL}/${data._id}`, data),
+    onSuccess: () => {
+      message.success("Cập nhật khách hàng thành công!");
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setIsModalOpen(false);
+    },
+    onError: () => message.error("Lỗi khi cập nhật khách hàng!"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => axios.delete(`${API_URL}/${id}`),
+    onSuccess: () => {
+      message.success("Đã xoá khách hàng!");
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: () => message.error("Lỗi khi xoá khách hàng!"),
+  });
+
+  // =============== HANDLERS ===============
+  const handleAddOrEdit = () => {
+    form.validateFields().then((values) => {
+      if (values.date_of_birth) {
+        values.date_of_birth = dayjs(values.date_of_birth).toISOString();
+      }
+      if (editingCustomer) {
+        updateMutation.mutate({ ...editingCustomer, ...values });
+      } else {
+        addMutation.mutate(values);
+      }
     });
   };
 
-  const handleEdit = (id: string) => {
-    console.log("Edit customer:", id);
+  const handleEdit = (record: Customer) => {
+    setEditingCustomer(record);
+    setIsModalOpen(true);
+    form.setFieldsValue({
+      ...record,
+      date_of_birth: record.date_of_birth ? dayjs(record.date_of_birth) : null,
+    });
   };
 
   const handleDelete = (id: string) => {
-    console.log("Delete customer:", id);
+    Modal.confirm({
+      title: "Xác nhận xoá khách hàng này?",
+      okType: "danger",
+      onOk: () => deleteMutation.mutate(id),
+    });
   };
 
-  // Table columns
+  // =============== TABLE COLUMNS ===============
   const columns = [
     {
-      title: "Ảnh đại diện",
+      title: "Ảnh",
       dataIndex: "avatar",
       key: "avatar",
       render: (avatar: string) =>
@@ -104,34 +127,22 @@ const Customers = () => {
           <Tag color="gray">No Avatar</Tag>
         ),
     },
+    { title: "Tên đăng nhập", dataIndex: "username", key: "username" },
+    { title: "Họ và tên", dataIndex: "full_name", key: "full_name" },
+    { title: "Email", dataIndex: "email", key: "email" },
+    { title: "Điện thoại", dataIndex: "phone", key: "phone" },
+    { title: "Thành phố", dataIndex: "city", key: "city" },
     {
-      title: "Tên đăng nhập",
-      dataIndex: "username",
-      key: "username",
-      render: (text: string) => <span className="font-medium">{text}</span>,
+      title: "Tổng chi tiêu",
+      dataIndex: "totalSpent",
+      key: "totalSpent",
+      render: (val: number) => (
+        <Tag color="purple">{val ? val.toLocaleString("vi-VN") + " ₫" : "0 ₫"}</Tag>
+      ),
+      sorter: (a: Customer, b: Customer) => (a.totalSpent || 0) - (b.totalSpent || 0),
     },
     {
-      title: "Họ và tên",
-      dataIndex: "full_name",
-      key: "full_name",
-    },
-    {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
-    },
-    {
-      title: "Điện thoại",
-      dataIndex: "phone",
-      key: "phone",
-    },
-    {
-      title: "Thành phố",
-      dataIndex: "city",
-      key: "city",
-    },
-    {
-      title: "Điểm tích lũy",
+      title: "Điểm",
       dataIndex: "point",
       key: "point",
       render: (point: number) => <Tag color="blue">{point ?? 0}</Tag>,
@@ -141,22 +152,18 @@ const Customers = () => {
       dataIndex: "is_active",
       key: "is_active",
       render: (active: boolean) =>
-        active ? (
-          <Tag color="green">Hoạt động</Tag>
-        ) : (
-          <Tag color="red">Khoá</Tag>
-        ),
+        active ? <Tag color="green">Hoạt động</Tag> : <Tag color="red">Khoá</Tag>,
     },
     {
       title: "Thao tác",
       key: "action",
       render: (record: Customer) => (
         <Space>
-          <Button type="primary" onClick={() => handleEdit(record._id)}>
-            Edit
+          <Button type="primary" onClick={() => handleEdit(record)}>
+            Sửa
           </Button>
           <Button danger onClick={() => handleDelete(record._id)}>
-            Delete
+            Xoá
           </Button>
         </Space>
       ),
@@ -164,72 +171,55 @@ const Customers = () => {
   ];
 
   if (isLoading) return <Spin tip="Đang tải danh sách khách hàng..." />;
-  if (isError) return <Alert type="error" message={error.message} />;
+  if (isError) return <Alert type="error" message={String(error)} />;
 
+  // =============== RENDER ===============
   return (
     <div>
       <main className="flex-1 p-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
-          {/* Header filter */}
+          {/* Header */}
           <div className="flex items-center mb-4 gap-6">
-            <h3 className="text-lg font-semibold w-56">Danh sách khách hàng:</h3>
+            <h3 className="text-lg font-semibold w-56">Danh sách khách hàng</h3>
 
             <Search
-              placeholder="Tìm kiếm khách hàng"
+              placeholder="Tìm theo họ tên hoặc sdt"
               allowClear
               enterButton
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="
-                !w-120
-                [&_.ant-input-affix-wrapper]:!border-gray-500
-                [&_.ant-input]:placeholder-gray-500
-                [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white
-                [&_.ant-btn]:hover:!bg-blue-700
-              "
+              onSearch={(value) => setKeyword(value)}
+              className="!w-80 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
             />
 
-            <Select
-              placeholder="Sắp xếp theo điểm"
-              value={sort}
-              onChange={(value) => setSort(value)}
-              options={[
-                { value: "", label: "Mặc định" },
-                { value: "asc", label: "Thấp đến cao" },
-                { value: "desc", label: "Cao đến thấp" },
-              ]}
-              className="!w-44 [&_.ant-select-selector]:!border-gray-600 [&_.ant-select-selector]:!font-semibold [&_.ant-select-selection-placeholder]:!font-semibold [&_.ant-select-selection-placeholder]:!text-gray-600"
-            />
-
-            <Button type="primary" onClick={() => setIsModalOpen(true)} className="ml-auto">
+            <Button
+              type="primary"
+              onClick={() => {
+                setEditingCustomer(null);
+                setIsModalOpen(true);
+                form.resetFields();
+              }}
+              className="ml-auto"
+            >
               Thêm khách hàng
-            </Button> 
+            </Button>
           </div>
 
           {/* Table */}
           <Table
             rowKey="_id"
             columns={columns}
-            dataSource={
-              Array.isArray(customers?.data)
-                ? customers.data.filter((c: Customer) =>
-                    normalizeText(c.full_name + c.username + c.email).includes(
-                      normalizeText(searchTerm)
-                    )
-                  )
-                : []
-            }
+            dataSource={customers || []}
             pagination={{ pageSize: 5 }}
             scroll={{ x: true }}
           />
         </div>
       </main>
 
-      {/* Modal Add Customer */}
+      {/* Modal Add/Edit */}
       <Modal
-        title="Thêm khách hàng mới"
+        title={editingCustomer ? "Cập nhật khách hàng" : "Thêm khách hàng mới"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        onOk={handleAddCustomer}
+        onOk={handleAddOrEdit}
         okText="Lưu"
         cancelText="Hủy"
         width={700}
@@ -242,16 +232,18 @@ const Customers = () => {
                 label="Tên đăng nhập"
                 rules={[{ required: true, message: "Nhập tên đăng nhập" }]}
               >
-                <Input />
+                <Input disabled={!!editingCustomer} />
               </Form.Item>
 
-              <Form.Item
-                name="password"
-                label="Mật khẩu"
-                rules={[{ required: true, message: "Nhập mật khẩu" }]}
-              >
-                <Input.Password />
-              </Form.Item>
+              {!editingCustomer && (
+                <Form.Item
+                  name="password"
+                  label="Mật khẩu"
+                  rules={[{ required: true, message: "Nhập mật khẩu" }]}
+                >
+                  <Input.Password />
+                </Form.Item>
+              )}
 
               <Form.Item
                 name="full_name"
@@ -266,7 +258,7 @@ const Customers = () => {
                 label="Email"
                 rules={[{ required: true, type: "email", message: "Nhập email hợp lệ" }]}
               >
-                <Input />
+                <Input disabled={!!editingCustomer} />
               </Form.Item>
 
               <Form.Item name="phone" label="Số điện thoại">
