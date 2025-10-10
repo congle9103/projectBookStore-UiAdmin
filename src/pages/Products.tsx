@@ -170,9 +170,14 @@ const Products = () => {
         const res = await axios.get(
           "https://projectbookstore-backendapi.onrender.com/api/v1/categories"
         );
-        setCategories(res.data.data || res.data || []);
+        // ✅ Chuẩn hóa dữ liệu: chỉ lấy mảng thực tế
+        const cats = res.data?.data?.categories;
+
+        // Nếu cats không phải mảng, fallback rỗng
+        setCategories(Array.isArray(cats) ? cats : []);
       } catch (err) {
         console.error("❌ Lỗi khi load categories:", err);
+        setCategories([]);
       }
     };
     fetchCategories();
@@ -188,11 +193,9 @@ const Products = () => {
       if (editingProduct) {
         await updateProduct(editingProduct._id, values);
         console.log("Cập nhật sản phẩm:", values);
-        
       } else {
         await createProduct(values);
         console.log("Thêm sản phẩm:", values);
-        
       }
 
       setIsModalOpen(false);
@@ -292,8 +295,7 @@ const Products = () => {
     },
   ];
 
-  if (isError)
-    return <Alert type="error" message={(error as Error).message} />;
+  if (isError) return <Alert type="error" message={(error as Error).message} />;
 
   // ========================================
   // 🔹 UI
@@ -303,9 +305,7 @@ const Products = () => {
       <div className="bg-white shadow-lg rounded-xl p-6">
         {/* Bộ lọc */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <label className="text-lg font-semibold">
-            Danh sách sản phẩm:
-          </label>
+          <label className="text-lg font-semibold">Danh sách sản phẩm:</label>
           <Search
             placeholder="Tìm sản phẩm..."
             allowClear
