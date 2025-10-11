@@ -31,6 +31,8 @@ const API_URL = "https://projectbookstore-backendapi.onrender.com/api/v1/custome
 const fetchCustomers = async ({ queryKey }: { queryKey: QueryKey }) => {
   const [, { sort_type, keyword }] = queryKey;
   const res = await axios.get(API_URL, { params: { sort_type, keyword } });
+  console.log("data", res);
+  
   return res.data.data;
 };
 
