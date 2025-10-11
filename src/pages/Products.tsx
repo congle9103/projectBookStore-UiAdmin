@@ -92,7 +92,6 @@ const createProduct = async (values: any) => {
     isNew: values.isNew,
     isPopular: values.isPopular,
     isFlashSale: values.isFlashSale,
-    // Không thêm createdAt/updatedAt ở đây – backend tự thêm
   };
 
   const response = await axios.post(API_URL, payload);

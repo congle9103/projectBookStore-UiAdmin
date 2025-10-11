@@ -2,9 +2,7 @@ import {
   Table,
   Image,
   Tag,
-  Spin,
   Alert,
-  Select,
   Space,
   Button,
   Input,
@@ -15,47 +13,84 @@ import {
   Checkbox,
   DatePicker,
   message,
+  Pagination,
+  Spin,
+  Select,
+  Popconfirm,
 } from "antd";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
 import dayjs from "dayjs";
+import { useSearchParams } from "react-router-dom";
 import type { Customer } from "../types/customer.type";
 
-type QueryKey = [string, { sort_type?: string; keyword?: string }];
-
-const API_URL = "https://projectbookstore-backendapi.onrender.com/api/v1/customers";
+const API_URL =
+  "https://projectbookstore-backendapi.onrender.com/api/v1/customers";
 
 // =============== FETCH LIST ===============
-const fetchCustomers = async ({ queryKey }: { queryKey: QueryKey }) => {
-  const [, { sort_type, keyword }] = queryKey;
-  const res = await axios.get(API_URL, { params: { sort_type, keyword } });
-  console.log("data", res);
-  
+const fetchCustomers = async ({
+  page = 1,
+  limit = 5,
+  sort_type,
+  keyword,
+}: {
+  page?: number;
+  limit?: number;
+  sort_type?: string;
+  keyword?: string;
+}) => {
+  const params: any = { page, limit };
+  if (keyword) params.keyword = keyword;
+  if (sort_type) params.sort_type = sort_type;
+
+  const res = await axios.get(API_URL, { params });
   return res.data.data;
 };
 
 const Customers = () => {
   const queryClient = useQueryClient();
-
-  const [sort_type, setSortType] = useState<string>("desc");
-  const [keyword, setKeyword] = useState("");
+  const [form] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [form] = Form.useForm();
 
+  // ==============================
+  // 📌 DÙNG URL PARAMS GIỐNG PRODUCTS
+  // ==============================
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = parseInt(searchParams.get("limit") || "5");
+  const keyword = searchParams.get("keyword") || "";
+  const sort_type = searchParams.get("sort_type") || "desc";
+
+  const updateParams = (updates: Record<string, string | number | undefined>) => {
+  const newParams = new URLSearchParams(searchParams);
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === undefined || value === "") newParams.delete(key);
+    else newParams.set(key, String(value));
+  });
+  setSearchParams(newParams);
+};
+
+  // ==============================
+  // 🔹 FETCH DATA
+  // ==============================
   const {
-    data: customers,
-    isLoading,
+    data: customersData,
     isError,
     error,
+    isFetching,
   } = useQuery({
-    queryKey: ["customers", { sort_type, keyword }],
-    queryFn: fetchCustomers,
+    queryKey: ["customers", page, limit, keyword, sort_type],
+    queryFn: () => fetchCustomers({ page, limit, keyword, sort_type }),
   });
 
-  // =============== CRUD MUTATIONS ===============
+  const customers = customersData || [];
+
+  // ==============================
+  // 🔹 MUTATIONS
+  // ==============================
   const addMutation = useMutation({
     mutationFn: (data: any) => axios.post(API_URL, data),
     onSuccess: () => {
@@ -85,7 +120,9 @@ const Customers = () => {
     onError: () => message.error("Lỗi khi xoá khách hàng!"),
   });
 
-  // =============== HANDLERS ===============
+  // ==============================
+  // 🔹 HANDLERS
+  // ==============================
   const handleAddOrEdit = () => {
     form.validateFields().then((values) => {
       if (values.date_of_birth) {
@@ -109,14 +146,12 @@ const Customers = () => {
   };
 
   const handleDelete = (id: string) => {
-    Modal.confirm({
-      title: "Xác nhận xoá khách hàng này?",
-      okType: "danger",
-      onOk: () => deleteMutation.mutate(id),
-    });
+    if(id) deleteMutation.mutate(id)
   };
 
-  // =============== TABLE COLUMNS ===============
+  // ==============================
+  // 🔹 TABLE COLUMNS
+  // ==============================
   const columns = [
     {
       title: "Ảnh",
@@ -124,7 +159,12 @@ const Customers = () => {
       key: "avatar",
       render: (avatar: string) =>
         avatar ? (
-          <Image src={avatar} width={50} height={50} style={{ borderRadius: "50%" }} />
+          <Image
+            src={avatar}
+            width={50}
+            height={50}
+            style={{ borderRadius: "50%" }}
+          />
         ) : (
           <Tag color="gray">No Avatar</Tag>
         ),
@@ -139,9 +179,10 @@ const Customers = () => {
       dataIndex: "totalSpent",
       key: "totalSpent",
       render: (val: number) => (
-        <Tag color="purple">{val ? val.toLocaleString("vi-VN") + " ₫" : "0 ₫"}</Tag>
+        <Tag color="purple">
+          {val ? val.toLocaleString("vi-VN") + " ₫" : "0 ₫"}
+        </Tag>
       ),
-      sorter: (a: Customer, b: Customer) => (a.totalSpent || 0) - (b.totalSpent || 0),
     },
     {
       title: "Điểm",
@@ -154,7 +195,11 @@ const Customers = () => {
       dataIndex: "is_active",
       key: "is_active",
       render: (active: boolean) =>
-        active ? <Tag color="green">Hoạt động</Tag> : <Tag color="red">Khoá</Tag>,
+        active ? (
+          <Tag color="green">Hoạt động</Tag>
+        ) : (
+          <Tag color="red">Khoá</Tag>
+        ),
     },
     {
       title: "Thao tác",
@@ -164,57 +209,81 @@ const Customers = () => {
           <Button type="primary" onClick={() => handleEdit(record)}>
             Sửa
           </Button>
-          <Button danger onClick={() => handleDelete(record._id)}>
-            Xoá
-          </Button>
+          <Popconfirm
+            title="Bạn có chắc muốn xóa?"
+            onConfirm={() => handleDelete(record._id)}
+          >
+            <Button danger>Xóa</Button>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  if (isLoading) return <Spin tip="Đang tải danh sách khách hàng..." />;
-  if (isError) return <Alert type="error" message={String(error)} />;
+  // ==============================
+  // 🔹 UI
+  // ==============================
+  if (isError)
+    return <Alert type="error" message={(error as Error).message} showIcon />;
 
-  // =============== RENDER ===============
   return (
-    <div>
-      <main className="flex-1 p-6">
-        <div className="bg-white shadow-lg rounded-xl p-6">
-          {/* Header */}
-          <div className="flex items-center mb-4 gap-6">
-            <h3 className="text-lg font-semibold w-56">Danh sách khách hàng</h3>
+    <div className="p-6">
+      <div className="bg-white shadow-lg rounded-xl p-6">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <h3 className="text-lg font-semibold">Danh sách khách hàng:</h3>
 
-            <Search
-              placeholder="Tìm theo họ tên hoặc sdt"
-              allowClear
-              enterButton
-              onSearch={(value) => setKeyword(value)}
-              className="!w-80 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
-            />
+          <Search
+            placeholder="Tìm theo họ tên hoặc sdt"
+            allowClear
+            enterButton
+            defaultValue={keyword}
+            onSearch={(value) => updateParams({ keyword: value, page: 1 })}
+            className="!w-80 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
+          />
 
-            <Button
-              type="primary"
-              onClick={() => {
-                setEditingCustomer(null);
-                setIsModalOpen(true);
-                form.resetFields();
-              }}
-              className="ml-auto"
-            >
-              Thêm khách hàng
-            </Button>
-          </div>
+          <Select
+          defaultValue={sort_type}
+          style={{ width: 220 }}
+          onChange={(value) => updateParams({ sort_type: value, page: 1 })}
+          options={[
+            { value: "desc", label: "Tổng chi tiêu: Cao → Thấp" },
+            { value: "asc", label: "Tổng chi tiêu: Thấp → Cao" },
+          ]}
+        />
 
-          {/* Table */}
+          <Button
+            type="primary"
+            className="ml-auto"
+            onClick={() => {
+              setEditingCustomer(null);
+              setIsModalOpen(true);
+              form.resetFields();
+            }}
+          >
+            Thêm khách hàng
+          </Button>
+        </div>
+
+        <Spin spinning={isFetching}>
           <Table
             rowKey="_id"
             columns={columns}
-            dataSource={customers || []}
-            pagination={{ pageSize: 5 }}
-            scroll={{ x: true }}
+            dataSource={customers}
+            pagination={false}
+          />
+        </Spin>
+
+        {/* Pagination */}
+        <div className="mt-4 text-right">
+          <Pagination
+            current={page}
+            total={customersData?.totalRecords || customers.length}
+            pageSize={limit}
+            onChange={(p) => updateParams({ page: p })}
+            showTotal={(total) => `Tổng ${total} khách hàng`}
           />
         </div>
-      </main>
+      </div>
 
       {/* Modal Add/Edit */}
       <Modal
@@ -265,16 +334,6 @@ const Customers = () => {
 
               <Form.Item name="phone" label="Số điện thoại">
                 <Input />
-              </Form.Item>
-
-              <Form.Item name="gender" label="Giới tính">
-                <Select
-                  options={[
-                    { value: "male", label: "Nam" },
-                    { value: "female", label: "Nữ" },
-                    { value: "other", label: "Khác" },
-                  ]}
-                />
               </Form.Item>
             </Col>
 
