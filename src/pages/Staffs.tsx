@@ -35,16 +35,19 @@ const fetchStaffs = async ({
   page = 1,
   limit = 5,
   sort_type,
+  sort_by,
   keyword,
 }: {
   page?: number;
   limit?: number;
   sort_type?: string;
+  sort_by?: string;
   keyword?: string;
 }) => {
   const params: any = { page, limit };
   if (keyword) params.keyword = keyword;
   if (sort_type) params.sort_type = sort_type;
+  if (sort_by) params.sort_by = sort_by;
 
   const res = await axios.get(API_URL, { params });
   return res.data.data;
@@ -64,8 +67,11 @@ const Staffs = () => {
   const limit = parseInt(searchParams.get("limit") || "5");
   const keyword = searchParams.get("keyword") || "";
   const sort_type = searchParams.get("sort_type") || "desc";
+  const sort_by = searchParams.get("sort_by") || "updatedAt";
 
-  const updateParams = (updates: Record<string, string | number | undefined>) => {
+  const updateParams = (
+    updates: Record<string, string | number | undefined>
+  ) => {
     const newParams = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === "") newParams.delete(key);
@@ -78,19 +84,18 @@ const Staffs = () => {
   // 🔹 FETCH DATA
   // ==============================
   const {
-    data: staffsData,
-    isError,
-    error,
-    isFetching,
-  } = useQuery({
-    queryKey: ["staffs", page, limit, keyword, sort_type],
-    queryFn: () => fetchStaffs({ page, limit, keyword, sort_type }),
-  });
+  data: staffsData,
+  isError,
+  error,
+  isFetching,
+} = useQuery({
+  queryKey: ["staffs", page, limit, keyword, sort_type, sort_by],
+  queryFn: () => fetchStaffs({ page, limit, keyword, sort_type, sort_by }),
+});
 
   console.log("staffData", staffsData);
-  
 
-  const staffs = staffsData || [];
+  const staffs = staffsData?.data || [];
 
   // ==============================
   // 🔹 MUTATIONS
@@ -166,28 +171,39 @@ const Staffs = () => {
       dataIndex: "role",
       key: "role",
       render: (role: string) =>
-        role === "admin" ? <Tag color="red">Admin</Tag> : <Tag color="blue">Dev</Tag>,
+        role === "admin" ? (
+          <Tag color="red">Admin</Tag>
+        ) : (
+          <Tag color="blue">Dev</Tag>
+        ),
     },
     {
       title: "Lương (VNĐ)",
       dataIndex: "salary",
       key: "salary",
       render: (salary: number) =>
-        salary ? <Tag color="purple">{salary.toLocaleString("vi-VN")} ₫</Tag> : "0 ₫",
+        salary ? (
+          <Tag color="purple">{salary.toLocaleString("vi-VN")} ₫</Tag>
+        ) : (
+          "0 ₫"
+        ),
     },
     {
       title: "Ngày tuyển dụng",
       dataIndex: "hire_date",
       key: "hire_date",
-      render: (date: string) =>
-        date ? dayjs(date).format("DD/MM/YYYY") : "-",
+      render: (date: string) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
       title: "Trạng thái",
       dataIndex: "is_active",
       key: "is_active",
       render: (active: boolean) =>
-        active ? <Tag color="green">Hoạt động</Tag> : <Tag color="red">Khoá</Tag>,
+        active ? (
+          <Tag color="green">Hoạt động</Tag>
+        ) : (
+          <Tag color="red">Khoá</Tag>
+        ),
     },
     {
       title: "Thao tác",
@@ -230,12 +246,15 @@ const Staffs = () => {
           />
 
           <Select
-            defaultValue={sort_type}
+            placeholder="Sắp xếp theo lương"
             style={{ width: 220 }}
-            onChange={(value) => updateParams({ sort_type: value, page: 1 })}
+            value={sort_type || undefined}
+            onChange={(value) =>
+              updateParams({ sort_type: value, sort_by: "salary" })
+            }
             options={[
-              { value: "desc", label: "Lương: Cao → Thấp" },
-              { value: "asc", label: "Lương: Thấp → Cao" },
+              { value: "asc", label: "Lương thấp → cao" },
+              { value: "desc", label: "Lương cao → thấp" },
             ]}
           />
 
@@ -315,7 +334,13 @@ const Staffs = () => {
               <Form.Item
                 name="email"
                 label="Email"
-                rules={[{ required: true, type: "email", message: "Nhập email hợp lệ" }]}
+                rules={[
+                  {
+                    required: true,
+                    type: "email",
+                    message: "Nhập email hợp lệ",
+                  },
+                ]}
               >
                 <Input disabled={!!editingStaff} />
               </Form.Item>

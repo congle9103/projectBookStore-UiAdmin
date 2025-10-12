@@ -150,6 +150,9 @@ const Products = () => {
       fetchProducts({ page, limit, keyword, sort_by, sort_type, cat_id }),
   });
 
+  console.log("data", data);
+  
+
   // Hàm cập nhật params trên URL
   const updateParams = (
     updates: Record<string, string | number | undefined>
@@ -255,6 +258,7 @@ const Products = () => {
       },
     },
     { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
+    { title: "Danh mục", dataIndex: "category_name", key: "category_name" },
     {
       title: "Giá gốc",
       dataIndex: "originalPrice",
@@ -405,7 +409,28 @@ const Products = () => {
               <Form.Item
                 name="product_name"
                 label="Tên sách"
-                rules={[{ required: true, message: "Vui lòng nhập tên sách" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên sách" },
+                  {
+                    min: 2,
+                    message: "Tên sản phẩm quá ngắn (tối thiểu 2 ký tự)",
+                  },
+                  { max: 255, message: "Tên sản phẩm tối đa 255 ký tự" },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const isDuplicate = data?.products?.some(
+                        (p) =>
+                          p.product_name.trim().toLowerCase() ===
+                            value.trim().toLowerCase() &&
+                          p._id !== editingProduct?._id // bỏ qua sản phẩm đang sửa
+                      );
+                      return isDuplicate
+                        ? Promise.reject("Tên sản phẩm đã tồn tại")
+                        : Promise.resolve();
+                    },
+                  },
+                ]}
               >
                 <Input
                   placeholder="Nhập tên sách"
@@ -426,7 +451,13 @@ const Products = () => {
               <Form.Item
                 name="slug"
                 label="Slug"
-                rules={[{ required: true, message: "Vui lòng nhập slug" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập slug" },
+                  {
+                    pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                    message: "Slug chỉ chứa chữ thường, số và dấu gạch ngang",
+                  },
+                ]}
               >
                 <Input placeholder="vd: vu-tru-trong-hat-cat" />
               </Form.Item>
@@ -448,15 +479,26 @@ const Products = () => {
               <Form.Item
                 name="authors"
                 label="Tác giả"
-                rules={[{ required: true, message: "Nhập ít nhất 1 tác giả" }]}
+                rules={[
+                  { required: true, message: "Nhập ít nhất 1 tác giả" },
+                  {
+                    min: 2,
+                    message: "Tên tác giả quá ngắn (tối thiểu 2 ký tự)",
+                  },
+                  { max: 255, message: "Tên tác giả tối đa 255 ký tự" },
+                ]}
               >
-                <Input placeholder="Nhập tên tác giả" />
+                <Input placeholder="Nhập tên tác giả, cách nhau bằng dấu phẩy" />
               </Form.Item>
 
               <Form.Item
                 name="publisher"
                 label="Nhà xuất bản"
-                rules={[{ required: true, message: "Nhập nhà xuất bản" }]}
+                rules={[
+                  { required: true, message: "Nhập nhà xuất bản" },
+                  { min: 2, message: "Tên quá ngắn" },
+                  { max: 255, message: "Tên tối đa 255 ký tự" },
+                ]}
               >
                 <Input placeholder="VD: NXB Khoa học" />
               </Form.Item>
@@ -464,12 +506,20 @@ const Products = () => {
               <Form.Item
                 name="supplier"
                 label="Nhà cung cấp"
-                rules={[{ required: true, message: "Nhập nhà cung cấp" }]}
+                rules={[
+                  { required: true, message: "Nhập nhà cung cấp" },
+                  { min: 2, message: "Tên quá ngắn" },
+                  { max: 255, message: "Tên tối đa 255 ký tự" },
+                ]}
               >
-                <Input placeholder="VD: NXB Trẻ" />
+                <Input placeholder="VD: Fahasa" />
               </Form.Item>
 
-              <Form.Item name="description" label="Mô tả">
+              <Form.Item
+                name="description"
+                label="Mô tả"
+                rules={[{ max: 5000, message: "Mô tả tối đa 5000 ký tự" }]}
+              >
                 <Input.TextArea
                   rows={4}
                   placeholder="Mô tả ngắn về nội dung sách"
@@ -482,32 +532,85 @@ const Products = () => {
               <Form.Item
                 name="originalPrice"
                 label="Giá gốc (VNĐ)"
-                rules={[{ required: true, message: "Nhập giá gốc" }]}
+                rules={[
+                  { required: true, message: "Nhập giá gốc" },
+                  { type: "number", min: 0, message: "Giá phải ≥ 0" },
+                ]}
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="discountPercent" label="Giảm giá (%)">
+              <Form.Item
+                name="discountPercent"
+                label="Giảm giá (%)"
+                rules={[
+                  {
+                    type: "number",
+                    min: 0,
+                    max: 90,
+                    message: "Giảm giá 0–90%",
+                  },
+                ]}
+              >
                 <InputNumber min={0} max={90} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="price" label="Giá sau giảm (VNĐ)">
+              <Form.Item
+                name="price"
+                label="Giá sau giảm (VNĐ)"
+                rules={[{ type: "number", min: 0, message: "Giá phải ≥ 0" }]}
+              >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="stock" label="Tồn kho">
+              <Form.Item
+                name="stock"
+                label="Tồn kho"
+                rules={[
+                  { required: true, message: "Nhập tồn kho" },
+                  { type: "number", min: 0, message: "Tồn kho ≥ 0" },
+                ]}
+              >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="publicationYear" label="Năm xuất bản">
-                <InputNumber min={1900} max={2025} style={{ width: "100%" }} />
+              <Form.Item
+                name="publicationYear"
+                label="Năm xuất bản"
+                rules={[
+                  {
+                    required: true,
+                    type: "number",
+                    min: 1900,
+                    max: new Date().getFullYear(),
+                    message: `Năm xuất bản từ 1900 đến ${new Date().getFullYear()}`,
+                  },
+                ]}
+              >
+                <InputNumber style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="pages" label="Số trang">
-                <InputNumber min={1} max={3000} style={{ width: "100%" }} />
+              <Form.Item
+                name="pages"
+                label="Số trang"
+                rules={[
+                  {
+                    required: true,
+                    type: "number",
+                    min: 50,
+                    max: 3000,
+                    message: "Từ 50–3000 trang",
+                  },
+                ]}
+              >
+                <InputNumber style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="format" label="Định dạng">
+              <Form.Item
+                name="format"
+                label="Định dạng"
+                rules={[{ required: true, message: "Chọn định dạng hợp lệ" }]}
+              >
                 <Select
                   options={[
                     { value: "Bìa mềm", label: "Bìa mềm" },
@@ -516,16 +619,55 @@ const Products = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="dimensions" label="Kích thước">
+              <Form.Item
+                name="dimensions"
+                label="Kích thước"
+                rules={[
+                  {
+                    pattern: /^[0-9]+x[0-9]+x[0-9]+(cm|mm)?$/,
+                    message: "Định dạng: rộngxcaoxdày (vd: 15x23x3cm)",
+                  },
+                ]}
+              >
                 <Input placeholder="15x23x3cm" />
               </Form.Item>
 
-              <Form.Item name="weight" label="Trọng lượng (gram)">
-                <InputNumber min={0} style={{ width: "100%" }} />
+              <Form.Item
+                name="weight"
+                label="Trọng lượng (gram)"
+                rules={[
+                  {
+                    type: "number",
+                    min: 100,
+                    max: 5000,
+                    message: "100–5000 gram",
+                  },
+                ]}
+              >
+                <InputNumber style={{ width: "100%" }} />
               </Form.Item>
 
-              <Form.Item name="thumbnails" label="Ảnh (URL)">
-                <Input placeholder="Nhập hoặc dán link ảnh" />
+              <Form.Item
+                name="thumbnails"
+                label="Ảnh (URL)"
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      const urls = value.split(",").map((u) => u.trim());
+                      const isValid = urls.every((url) =>
+                        /^(http|https):\/\/[^ "]+$/.test(url)
+                      );
+                      return isValid
+                        ? Promise.resolve()
+                        : Promise.reject(
+                            "Mỗi ảnh phải là URL hợp lệ (http/https)"
+                          );
+                    },
+                  },
+                ]}
+              >
+                <Input placeholder="Nhập hoặc dán link ảnh (nhiều link cách nhau bằng dấu phẩy)" />
               </Form.Item>
 
               <Row gutter={8}>

@@ -64,14 +64,16 @@ const Customers = () => {
   const keyword = searchParams.get("keyword") || "";
   const sort_type = searchParams.get("sort_type") || "desc";
 
-  const updateParams = (updates: Record<string, string | number | undefined>) => {
-  const newParams = new URLSearchParams(searchParams);
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value === undefined || value === "") newParams.delete(key);
-    else newParams.set(key, String(value));
-  });
-  setSearchParams(newParams);
-};
+  const updateParams = (
+    updates: Record<string, string | number | undefined>
+  ) => {
+    const newParams = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === "") newParams.delete(key);
+      else newParams.set(key, String(value));
+    });
+    setSearchParams(newParams);
+  };
 
   // ==============================
   // 🔹 FETCH DATA
@@ -146,7 +148,7 @@ const Customers = () => {
   };
 
   const handleDelete = (id: string) => {
-    if(id) deleteMutation.mutate(id)
+    if (id) deleteMutation.mutate(id);
   };
 
   // ==============================
@@ -242,14 +244,14 @@ const Customers = () => {
           />
 
           <Select
-          defaultValue={sort_type}
-          style={{ width: 220 }}
-          onChange={(value) => updateParams({ sort_type: value, page: 1 })}
-          options={[
-            { value: "desc", label: "Tổng chi tiêu: Cao → Thấp" },
-            { value: "asc", label: "Tổng chi tiêu: Thấp → Cao" },
-          ]}
-        />
+            defaultValue={sort_type}
+            style={{ width: 220 }}
+            onChange={(value) => updateParams({ sort_type: value, page: 1 })}
+            options={[
+              { value: "desc", label: "Tổng chi tiêu: Cao → Thấp" },
+              { value: "asc", label: "Tổng chi tiêu: Thấp → Cao" },
+            ]}
+          />
 
           <Button
             type="primary"
@@ -327,7 +329,13 @@ const Customers = () => {
               <Form.Item
                 name="email"
                 label="Email"
-                rules={[{ required: true, type: "email", message: "Nhập email hợp lệ" }]}
+                rules={[
+                  {
+                    required: true,
+                    type: "email",
+                    message: "Nhập email hợp lệ",
+                  },
+                ]}
               >
                 <Input disabled={!!editingCustomer} />
               </Form.Item>
