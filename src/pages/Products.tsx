@@ -151,7 +151,6 @@ const Products = () => {
   });
 
   console.log("data", data);
-  
 
   // Hàm cập nhật params trên URL
   const updateParams = (
@@ -258,7 +257,12 @@ const Products = () => {
       },
     },
     { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
-    { title: "Danh mục", dataIndex: "category_name", key: "category_name" },
+    {
+      title: "Danh mục",
+      dataIndex: "category_id",
+      key: "category_id",
+      render: (category: { name: string }) => category?.name || "—",
+    },
     {
       title: "Giá gốc",
       dataIndex: "originalPrice",
@@ -495,24 +499,64 @@ const Products = () => {
                 name="publisher"
                 label="Nhà xuất bản"
                 rules={[
-                  { required: true, message: "Nhập nhà xuất bản" },
-                  { min: 2, message: "Tên quá ngắn" },
-                  { max: 255, message: "Tên tối đa 255 ký tự" },
+                  { required: true, message: "Vui lòng chọn nhà xuất bản" },
                 ]}
               >
-                <Input placeholder="VD: NXB Khoa học" />
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Chọn hoặc nhập nhà xuất bản"
+                  options={[
+                    { value: "Nhà Xuất Bản Trẻ", label: "Nhà Xuất Bản Trẻ" },
+                    {
+                      value: "Nhà Xuất Bản Kim Đồng",
+                      label: "Nhà Xuất Bản Kim Đồng",
+                    },
+                    {
+                      value: "Nhà Xuất Bản Tổng Hợp TP. Hồ Chí Minh",
+                      label: "Nhà Xuất Bản Tổng Hợp TP. Hồ Chí Minh",
+                    },
+                    {
+                      value: "Nhà Xuất Bản Lao Động",
+                      label: "Nhà Xuất Bản Lao Động",
+                    },
+                    {
+                      value: "Nhà Xuất Bản Chính Trị Quốc Gia Sự Thật",
+                      label: "Nhà Xuất Bản Chính Trị Quốc Gia Sự Thật",
+                    },
+                  ]}
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
               </Form.Item>
 
               <Form.Item
                 name="supplier"
                 label="Nhà cung cấp"
                 rules={[
-                  { required: true, message: "Nhập nhà cung cấp" },
-                  { min: 2, message: "Tên quá ngắn" },
-                  { max: 255, message: "Tên tối đa 255 ký tự" },
+                  { required: true, message: "Vui lòng chọn nhà cung cấp" },
                 ]}
               >
-                <Input placeholder="VD: Fahasa" />
+                <Select
+                  showSearch
+                  allowClear
+                  placeholder="Chọn hoặc nhập nhà cung cấp"
+                  options={[
+                    { value: "FAHASA", label: "FAHASA" },
+                    { value: "Nhã Nam", label: "Nhã Nam" },
+                    { value: "Thái Hà Books", label: "Thái Hà Books" },
+                    { value: "Alpha Books", label: "Alpha Books" },
+                    { value: "Phương Nam Book", label: "Phương Nam Book" },
+                  ]}
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
               </Form.Item>
 
               <Form.Item

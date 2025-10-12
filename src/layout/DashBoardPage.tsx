@@ -17,6 +17,8 @@ import {
   FaCompass,
   FaUserTie,
   FaTicketAlt,
+  FaTruck,
+  FaBuilding,
 } from "react-icons/fa";
 import { BiSolidCategory } from "react-icons/bi";
 
@@ -28,6 +30,8 @@ import Customers from "../pages/Customers";
 import Voucher from "../pages/Vouchers";
 import Reviews from "../pages/Reviews";
 import Staffs from "../pages/Staffs";
+import Suppliers from "../pages/Suppliers";
+import Publishers from "../pages/Publisher";
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("products");
@@ -47,12 +51,12 @@ const DashboardPage = () => {
     { key: "orders", icon: <FaShoppingCart />, label: "Đơn hàng" },
     { key: "customers", icon: <FaUsers />, label: "Khách hàng" },
     { key: "staffs", icon: <FaUserTie />, label: "Nhân viên" },
+    { key: "suppliers", icon: <FaTruck />, label: "Nhà cung cấp" },
+    { key: "publishers", icon: <FaBuilding />, label: "Nhà xuất bản" },
     { key: "voucher", icon: <FaTicketAlt />, label: "Voucher" },
     { key: "posts", icon: <FaFileAlt />, label: "Bài viết" },
-    { key: "admin", icon: <FaUserShield />, label: "Quản trị" },
     { key: "settings", icon: <FaCog />, label: "Hệ thống" },
     { key: "themes", icon: <FaPalette />, label: "Giao diện" },
-    { key: "database", icon: <FaDatabase />, label: "Database" },
   ];
 
   const renderContent = () => {
@@ -67,6 +71,10 @@ const DashboardPage = () => {
         return <Orders />;
       case "customers":
         return <Customers />;
+      case "suppliers":
+        return <Suppliers />;
+      case "publishers":
+        return <Publishers />;
       case "voucher":
         return <Voucher />;
       case "reviews":
