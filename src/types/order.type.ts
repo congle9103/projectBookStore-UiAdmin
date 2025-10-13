@@ -14,12 +14,12 @@ export interface Order {
   _id: string;
   customer: {
     _id: string;
-    name: string;
-    email: string;
+    full_name: string;
+    phone: string;
   };
   staff: {
     _id: string;
-    name: string;
+    full_name: string;
   };
   items: OrderItem[];
   status: "pending" | "processing" | "shipping" | "completed" | "cancelled";

@@ -47,14 +47,6 @@ const fetchPublishers = async ({
 const createPublisher = async (values: any) => {
   const payload = {
     name: values.name,
-    slug:
-      values.slug ||
-      values.name
-        ?.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, ""),
     description: values.description,
   };
   return axios.post(API_URL, payload);
@@ -66,14 +58,6 @@ const createPublisher = async (values: any) => {
 const updatePublisher = async (id: string, values: any) => {
   const payload = {
     name: values.name,
-    slug:
-      values.slug ||
-      values.name
-        ?.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, ""),
     description: values.description,
   };
   return axios.put(`${API_URL}/${id}`, payload);
@@ -116,9 +100,6 @@ const Publishers = () => {
     queryKey: ["publishers", page, limit, keyword],
     queryFn: () => fetchPublishers({ page, limit, keyword }),
   });
-
-  console.log("data;", data);
-  
 
   // ========================================
   // 🔹 LƯU (CREATE / UPDATE)
@@ -179,7 +160,12 @@ const Publishers = () => {
       key: "name",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
-    { title: "Slug", dataIndex: "slug", key: "slug" },
+    {
+      title: "Slug",
+      dataIndex: "slug",
+      key: "slug",
+      render: (text: string) => <i>{text}</i>,
+    },
     {
       title: "Mô tả",
       dataIndex: "description",
@@ -245,7 +231,7 @@ const Publishers = () => {
         <Table
           rowKey="_id"
           columns={columns}
-          dataSource={data || []}
+          dataSource={data?.publishers || data?.data || []}
           loading={isFetching}
           pagination={false}
         />
@@ -295,15 +281,6 @@ const Publishers = () => {
                     form.setFieldsValue({ slug });
                   }}
                 />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item
-                name="slug"
-                label="Slug"
-                rules={[{ required: true, message: "Nhập slug" }]}
-              >
-                <Input placeholder="vd: kim-dong" />
               </Form.Item>
             </Col>
             <Col span={24}>

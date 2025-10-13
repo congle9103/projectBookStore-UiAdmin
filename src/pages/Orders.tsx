@@ -15,11 +15,19 @@ import {
   Descriptions,
   List,
 } from "antd";
-import { useQuery, useQueryClient, type QueryFunction } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryFunction,
+} from "@tanstack/react-query";
 import axios from "axios";
 import Search from "antd/es/input/Search";
 import { useState } from "react";
-import type { Order, OrderQueryParams, OrderResponse } from "../types/order.type";
+import type {
+  Order,
+  OrderQueryParams,
+  OrderResponse,
+} from "../types/order.type";
 
 // Fetch Orders
 const fetchOrders: QueryFunction<
@@ -61,10 +69,15 @@ const Orders = () => {
     isError,
     error,
     isFetching,
-  } = useQuery<OrderResponse, Error, OrderResponse, [string, OrderQueryParams]>({
-    queryKey: ["orders", { status, minAmount, maxAmount, search: searchTerm }],
-    queryFn: fetchOrders,
-  });
+  } = useQuery<OrderResponse, Error, OrderResponse, [string, OrderQueryParams]>(
+    {
+      queryKey: [
+        "orders",
+        { status, minAmount, maxAmount, search: searchTerm },
+      ],
+      queryFn: fetchOrders,
+    }
+  );
 
   // Save Order (edit only)
   const handleSaveOrder = async () => {
@@ -135,11 +148,29 @@ const Orders = () => {
       key: "staff",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
-    { title: "Người nhận", dataIndex: "recipient_name", key: "recipient_name" },
+    {
+      title: "Khách hàng / Nhân viên",
+      key: "person",
+      render: (record) => {
+        if (record.customer) {
+          return record.customer.full_name; // Tên khách hàng
+        } else if (record.staff) {
+          return record.staff.full_name; // Tên nhân viên
+        }
+        return "-";
+      },
+    },
     {
       title: "Điện thoại",
-      dataIndex: "recipient_phone",
-      key: "recipient_phone",
+      key: "phone",
+      render: (record) => {
+        if (record.customer) {
+          return record.customer.phone;
+        } else if (record.staff) {
+          return record.staff.phone;
+        }
+        return "-";
+      },
     },
     { title: "Thành phố", dataIndex: "city", key: "city" },
     {
@@ -200,7 +231,7 @@ const Orders = () => {
             <h3 className="text-lg font-semibold w-48">Danh sách đơn hàng:</h3>
 
             <Search
-              placeholder="Tìm theo tên khách / người nhận"
+              placeholder="Tìm theo tên khách hàng, nhân viên"
               allowClear
               onChange={(e) => setSearchTerm(e.target.value)} // gọi API ngay khi nhập
               value={searchTerm}
@@ -323,16 +354,13 @@ const Orders = () => {
           <>
             <Descriptions bordered column={2}>
               <Descriptions.Item label="Khách hàng">
-                {selectedOrder.customer?.name}
+                {selectedOrder.customer?.full_name}
               </Descriptions.Item>
               <Descriptions.Item label="Nhân viên">
-                {selectedOrder.staff?.name}
+                {selectedOrder.staff?.full_name}
               </Descriptions.Item>
-              <Descriptions.Item label="Người nhận">
-                {selectedOrder.recipient_name}
-              </Descriptions.Item>
-              <Descriptions.Item label="Điện thoại">
-                {selectedOrder.recipient_phone}
+              <Descriptions.Item label="Sdt khách hàng">
+                {selectedOrder.customer?.phone}
               </Descriptions.Item>
               <Descriptions.Item label="Địa chỉ" span={2}>
                 {selectedOrder.shipping_address}, {selectedOrder.city}

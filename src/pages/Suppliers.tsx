@@ -47,14 +47,6 @@ const fetchSuppliers = async ({
 const createSupplier = async (values: any) => {
   const payload = {
     name: values.name,
-    slug:
-      values.slug ||
-      values.name
-        ?.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, ""),
     description: values.description,
   };
   return axios.post(API_URL, payload);
@@ -66,14 +58,6 @@ const createSupplier = async (values: any) => {
 const updateSupplier = async (id: string, values: any) => {
   const payload = {
     name: values.name,
-    slug:
-      values.slug ||
-      values.name
-        ?.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, ""),
     description: values.description,
   };
   return axios.put(`${API_URL}/${id}`, payload);
@@ -176,7 +160,12 @@ const Suppliers = () => {
       key: "name",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
-    { title: "Slug", dataIndex: "slug", key: "slug" },
+    {
+      title: "Slug",
+      dataIndex: "slug",
+      key: "slug",
+      render: (text: string) => <i>{text}</i>,
+    },
     {
       title: "Mô tả",
       dataIndex: "description",
@@ -242,7 +231,7 @@ const Suppliers = () => {
         <Table
           rowKey="_id"
           columns={columns}
-          dataSource={data || []}
+          dataSource={data?.suppliers || data?.data || []}
           loading={isFetching}
           pagination={false}
         />
@@ -282,25 +271,7 @@ const Suppliers = () => {
               >
                 <Input
                   placeholder="Nhập tên nhà cung cấp"
-                  onChange={(e) => {
-                    const slug = e.target.value
-                      .toLowerCase()
-                      .normalize("NFD")
-                      .replace(/[\u0300-\u036f]/g, "")
-                      .replace(/[^a-z0-9]+/g, "-")
-                      .replace(/(^-|-$)+/g, "");
-                    form.setFieldsValue({ slug });
-                  }}
                 />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item
-                name="slug"
-                label="Slug"
-                rules={[{ required: true, message: "Nhập slug" }]}
-              >
-                <Input placeholder="vd: nxb-tre" />
               </Form.Item>
             </Col>
             <Col span={24}>
