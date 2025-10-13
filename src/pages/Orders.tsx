@@ -149,7 +149,7 @@ const Orders = () => {
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
-      title: "Khách hàng / Nhân viên",
+      title: "Khách hàng",
       key: "person",
       render: (record) => {
         if (record.customer) {

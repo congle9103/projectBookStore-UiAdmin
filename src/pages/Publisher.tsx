@@ -267,7 +267,16 @@ const Publishers = () => {
               <Form.Item
                 name="name"
                 label="Tên nhà xuất bản"
-                rules={[{ required: true, message: "Nhập tên nhà xuất bản" }]}
+                rules={[
+                  { required: true, message: "Nhập tên nhà xuất bản" },
+                  { min: 3, message: "Tên nhà xuất bản tối thiểu 3 ký tự" },
+                  { max: 50, message: "Tên nhà xuất bản tối đa 50 ký tự" },
+                  {
+                    whitespace: true,
+                    message:
+                      "Tên nhà xuất bản không được chứa khoảng trắng đầu/cuối",
+                  },
+                ]}
               >
                 <Input
                   placeholder="Nhập tên nhà xuất bản"

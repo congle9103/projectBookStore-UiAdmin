@@ -278,7 +278,16 @@ const Categories = () => {
               <Form.Item
                 name="name"
                 label="Tên thể loại"
-                rules={[{ required: true, message: "Nhập tên thể loại" }]}
+                rules={[
+                  { required: true, message: "Nhập tên thể loại" },
+                  { min: 3, message: "Tên thể loại tối thiểu 3 ký tự" },
+                  { max: 50, message: "Tên thể loại tối đa 50 ký tự" },
+                  {
+                    whitespace: true,
+                    message:
+                      "Tên thể loại không được chứa khoảng trắng đầu/cuối",
+                  },
+                ]}
               >
                 <Input
                   placeholder="Nhập tên thể loại"
@@ -298,13 +307,27 @@ const Categories = () => {
               <Form.Item
                 name="slug"
                 label="Slug"
-                rules={[{ required: true, message: "Nhập slug" }]}
+                rules={[
+                  { required: true, message: "Nhập slug" },
+                  { min: 3, message: "Slug tối thiểu 3 ký tự" },
+                  { max: 255, message: "Slug tối đa 255 ký tự" },
+                  {
+                    pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                    message: "Slug chỉ chứa chữ thường, số, gạch ngang",
+                  },
+                ]}
               >
                 <Input placeholder="vd: van-hoc" />
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item name="description" label="Mô tả">
+              <Form.Item
+                name="description"
+                label="Mô tả"
+                rules={[
+                  { max: 500, message: "Mô tả tối đa 500 ký tự" },
+                ]}
+              >
                 <Input.TextArea rows={3} placeholder="Mô tả thể loại" />
               </Form.Item>
             </Col>

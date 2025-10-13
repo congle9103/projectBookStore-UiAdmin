@@ -267,7 +267,16 @@ const Suppliers = () => {
               <Form.Item
                 name="name"
                 label="Tên nhà cung cấp"
-                rules={[{ required: true, message: "Nhập tên nhà cung cấp" }]}
+                rules={[
+                  { required: true, message: "Nhập tên nhà cung cấp" },
+                  { min: 3, message: "Tên nhà cung cấp tối thiểu 3 ký tự" },
+                  { max: 50, message: "Tên nhà cung cấp tối đa 50 ký tự" },
+                  {
+                    whitespace: true,
+                    message:
+                      "Tên nhà cung cấp không được chứa khoảng trắng đầu/cuối",
+                  },
+                ]}
               >
                 <Input
                   placeholder="Nhập tên nhà cung cấp"
