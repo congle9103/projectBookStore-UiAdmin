@@ -300,72 +300,163 @@ const Customers = () => {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
+              {/* USERNAME */}
               <Form.Item
                 name="username"
                 label="Tên đăng nhập"
-                rules={[{ required: true, message: "Nhập tên đăng nhập" }]}
-              >
-                <Input disabled={!!editingCustomer} />
-              </Form.Item>
-
-              {!editingCustomer && (
-                <Form.Item
-                  name="password"
-                  label="Mật khẩu"
-                  rules={[{ required: true, message: "Nhập mật khẩu" }]}
-                >
-                  <Input.Password />
-                </Form.Item>
-              )}
-
-              <Form.Item
-                name="full_name"
-                label="Họ và tên"
-                rules={[{ required: true, message: "Nhập họ tên" }]}
-              >
-                <Input />
-              </Form.Item>
-
-              <Form.Item
-                name="email"
-                label="Email"
                 rules={[
+                  { required: true, message: "Vui lòng nhập tên đăng nhập" },
                   {
-                    required: true,
-                    type: "email",
-                    message: "Nhập email hợp lệ",
+                    min: 3,
+                    max: 20,
+                    message: "Tên đăng nhập phải từ 3–20 ký tự",
+                  },
+                  {
+                    pattern: /^(?![_.])(?!.*[_.]{2})[a-z0-9._]+(?<![_.])$/,
+                    message:
+                      "Tên đăng nhập không được bắt đầu/kết thúc bằng '.' hoặc '_' và không chứa ký tự đặc biệt",
                   },
                 ]}
               >
                 <Input disabled={!!editingCustomer} />
               </Form.Item>
 
-              <Form.Item name="phone" label="Số điện thoại">
+              {/* PASSWORD */}
+              {!editingCustomer && (
+                <Form.Item
+                  name="password"
+                  label="Mật khẩu"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập mật khẩu" },
+                    {
+                      min: 8,
+                      message: "Mật khẩu phải có ít nhất 8 ký tự",
+                    },
+                    {
+                      pattern:
+                        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+                      message:
+                        "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt",
+                    },
+                  ]}
+                >
+                  <Input.Password />
+                </Form.Item>
+              )}
+
+              {/* FULL NAME */}
+              <Form.Item
+                name="full_name"
+                label="Họ và tên"
+                rules={[
+                  { required: true, message: "Vui lòng nhập họ tên" },
+                  {
+                    min: 3,
+                    max: 100,
+                    message: "Họ tên phải từ 3–100 ký tự",
+                  },
+                ]}
+              >
+                <Input />
+              </Form.Item>
+
+              {/* EMAIL */}
+              <Form.Item
+                name="email"
+                label="Email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email" },
+                  { type: "email", message: "Email không hợp lệ" },
+                  { max: 100, message: "Email tối đa 100 ký tự" },
+                ]}
+              >
+                <Input disabled={!!editingCustomer} />
+              </Form.Item>
+
+              {/* PHONE */}
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại" },
+                  {
+                    pattern: /^\d{10,15}$/,
+                    message: "Số điện thoại phải từ 10–15 chữ số",
+                  },
+                ]}
+              >
                 <Input />
               </Form.Item>
             </Col>
 
             <Col span={12}>
+              {/* AVATAR */}
               <Form.Item name="avatar" label="Ảnh đại diện (URL)">
+                <Input placeholder="https://..." />
+              </Form.Item>
+
+              {/* ADDRESS */}
+              <Form.Item
+                name="address"
+                label="Địa chỉ"
+                rules={[
+                  { required: true, message: "Vui lòng nhập địa chỉ" },
+                  { max: 255, message: "Địa chỉ tối đa 255 ký tự" },
+                ]}
+              >
                 <Input />
               </Form.Item>
 
-              <Form.Item name="address" label="Địa chỉ">
+              {/* CITY */}
+              <Form.Item
+                name="city"
+                label="Thành phố"
+                rules={[
+                  { required: true, message: "Vui lòng nhập thành phố" },
+                  { max: 100, message: "Thành phố tối đa 100 ký tự" },
+                ]}
+              >
                 <Input />
               </Form.Item>
 
-              <Form.Item name="city" label="Thành phố">
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="date_of_birth" label="Ngày sinh">
+              {/* DATE OF BIRTH */}
+              <Form.Item
+                name="date_of_birth"
+                label="Ngày sinh"
+                rules={[{ required: true, message: "Vui lòng chọn ngày sinh" }]}
+              >
                 <DatePicker className="w-full" format="YYYY-MM-DD" />
               </Form.Item>
 
-              <Form.Item name="point" label="Điểm tích lũy">
-                <Input type="number" />
+              {/* GENDER */}
+              <Form.Item
+                name="gender"
+                label="Giới tính"
+                rules={[{ required: true, message: "Vui lòng chọn giới tính" }]}
+              >
+                <Select placeholder="Chọn giới tính">
+                  <Select.Option value="male">Nam</Select.Option>
+                  <Select.Option value="female">Nữ</Select.Option>
+                  <Select.Option value="other">Khác</Select.Option>
+                </Select>
               </Form.Item>
 
+              {/* POINT */}
+              <Form.Item
+                name="point"
+                label="Điểm tích lũy"
+                rules={[
+                  {
+                    type: "number",
+                    min: 0,
+                    message: "Điểm phải là số không âm",
+                  },
+                ]}
+              >
+                <Input disabled={!!editingCustomer} type="number" />
+              </Form.Item>
+
+              {/* IS_ACTIVE */}
               <Form.Item name="is_active" valuePropName="checked">
                 <Checkbox>Đang hoạt động</Checkbox>
               </Form.Item>

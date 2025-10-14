@@ -47,6 +47,7 @@ const fetchPublishers = async ({
 const createPublisher = async (values: any) => {
   const payload = {
     name: values.name,
+    slug: values.slug,
     description: values.description,
   };
   return axios.post(API_URL, payload);
@@ -58,6 +59,7 @@ const createPublisher = async (values: any) => {
 const updatePublisher = async (id: string, values: any) => {
   const payload = {
     name: values.name,
+    slug: values.slug,
     description: values.description,
   };
   return axios.put(`${API_URL}/${id}`, payload);
@@ -281,15 +283,35 @@ const Publishers = () => {
                 <Input
                   placeholder="Nhập tên nhà xuất bản"
                   onChange={(e) => {
-                    const slug = e.target.value
-                      .toLowerCase()
-                      .normalize("NFD")
-                      .replace(/[\u0300-\u036f]/g, "")
-                      .replace(/[^a-z0-9]+/g, "-")
-                      .replace(/(^-|-$)+/g, "");
-                    form.setFieldsValue({ slug });
+                    const name = e.target.value;
+                    form.setFieldsValue({
+                      slug: name
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/(^-|-$)+/g, ""),
+                    });
                   }}
                 />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item
+                name="slug"
+                label="Slug"
+                rules={[
+                  {
+                    required: true,
+                    message: "Slug thay đổi theo tên nhà xuất bản",
+                  },
+                  {
+                    pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                    message: "Slug chỉ chứa chữ thường, số và dấu gạch ngang",
+                  },
+                ]}
+              >
+                <Input placeholder="slug tự điền theo tên nhà xuất bản" />
               </Form.Item>
             </Col>
             <Col span={24}>

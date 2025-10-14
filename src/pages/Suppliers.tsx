@@ -47,6 +47,7 @@ const fetchSuppliers = async ({
 const createSupplier = async (values: any) => {
   const payload = {
     name: values.name,
+    slug: values.slug,
     description: values.description,
   };
   return axios.post(API_URL, payload);
@@ -58,6 +59,7 @@ const createSupplier = async (values: any) => {
 const updateSupplier = async (id: string, values: any) => {
   const payload = {
     name: values.name,
+    slug: values.slug,
     description: values.description,
   };
   return axios.put(`${API_URL}/${id}`, payload);
@@ -78,7 +80,9 @@ const Suppliers = () => {
   const [form] = Form.useForm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<ISupplier | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<ISupplier | null>(
+    null
+  );
 
   // URL Params
   const page = parseInt(searchParams.get("page") || "1");
@@ -86,7 +90,9 @@ const Suppliers = () => {
   const keyword = searchParams.get("keyword") || "";
 
   // Update params
-  const updateParams = (updates: Record<string, string | number | undefined>) => {
+  const updateParams = (
+    updates: Record<string, string | number | undefined>
+  ) => {
     const newParams = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
       if (value === undefined || value === "") newParams.delete(key);
@@ -191,8 +197,7 @@ const Suppliers = () => {
     },
   ];
 
-  if (isError)
-    return <Alert type="error" message={(error as Error).message} />;
+  if (isError) return <Alert type="error" message={(error as Error).message} />;
 
   // ========================================
   // 🔹 UI
@@ -250,7 +255,9 @@ const Suppliers = () => {
 
       {/* Modal thêm / sửa */}
       <Modal
-        title={editingSupplier ? "Chỉnh sửa nhà cung cấp" : "Thêm nhà cung cấp mới"}
+        title={
+          editingSupplier ? "Chỉnh sửa nhà cung cấp" : "Thêm nhà cung cấp mới"
+        }
         open={isModalOpen}
         onCancel={() => {
           setIsModalOpen(false);
@@ -280,7 +287,36 @@ const Suppliers = () => {
               >
                 <Input
                   placeholder="Nhập tên nhà cung cấp"
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    form.setFieldsValue({
+                      slug: name
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/(^-|-$)+/g, ""),
+                    });
+                  }}
                 />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item
+                name="slug"
+                label="Slug"
+                rules={[
+                  {
+                    required: true,
+                    message: "Slug thay đổi theo tên nhà cung cấp",
+                  },
+                  {
+                    pattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                    message: "Slug chỉ chứa chữ thường, số và dấu gạch ngang",
+                  },
+                ]}
+              >
+                <Input placeholder="nhập slug" />
               </Form.Item>
             </Col>
             <Col span={24}>

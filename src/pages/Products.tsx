@@ -24,6 +24,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { Product } from "../types/product.type";
 import type { ICategory } from "../types/category.type";
+import type { ISupplier } from "../types/supplier.type";
+import type { IPublisher } from "../types/publisher.type";
 
 const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products`;
 
@@ -134,6 +136,8 @@ const Products = () => {
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [publishers, setPublishers] = useState<IPublisher[]>([]);
+  const [suppliers, setSuppliers] = useState<ISupplier[]>([]);
 
   // Lấy params từ URL
   const page = parseInt(searchParams.get("page") || "1");
@@ -182,6 +186,36 @@ const Products = () => {
       }
     };
     fetchCategories();
+  }, []);
+
+  // Fetch publishers and suppliers
+  useEffect(() => {
+    const fetchExtraData = async () => {
+      try {
+        const [pubRes, supRes] = await Promise.all([
+          axios.get(
+            "https://projectbookstore-backendapi.onrender.com/api/v1/publishers"
+          ),
+          axios.get(
+            "https://projectbookstore-backendapi.onrender.com/api/v1/suppliers"
+          ),
+        ]);
+
+        const pubs =
+          pubRes.data?.data?.publishers || pubRes.data?.publishers || [];
+        const sups =
+          supRes.data?.data?.suppliers || supRes.data?.suppliers || [];
+
+        setPublishers(Array.isArray(pubs) ? pubs : []);
+        setSuppliers(Array.isArray(sups) ? sups : []);
+      } catch (error) {
+        console.error("❌ Lỗi khi load publisher/supplier:", error);
+        setPublishers([]);
+        setSuppliers([]);
+      }
+    };
+
+    fetchExtraData();
   }, []);
 
   // ========================================
@@ -506,25 +540,10 @@ const Products = () => {
                   showSearch
                   allowClear
                   placeholder="Chọn hoặc nhập nhà xuất bản"
-                  options={[
-                    { value: "Nhà Xuất Bản Trẻ", label: "Nhà Xuất Bản Trẻ" },
-                    {
-                      value: "Nhà Xuất Bản Kim Đồng",
-                      label: "Nhà Xuất Bản Kim Đồng",
-                    },
-                    {
-                      value: "Nhà Xuất Bản Tổng Hợp TP. Hồ Chí Minh",
-                      label: "Nhà Xuất Bản Tổng Hợp TP. Hồ Chí Minh",
-                    },
-                    {
-                      value: "Nhà Xuất Bản Lao Động",
-                      label: "Nhà Xuất Bản Lao Động",
-                    },
-                    {
-                      value: "Nhà Xuất Bản Chính Trị Quốc Gia Sự Thật",
-                      label: "Nhà Xuất Bản Chính Trị Quốc Gia Sự Thật",
-                    },
-                  ]}
+                  options={publishers.map((pub) => ({
+                    value: pub._id,
+                    label: pub.name,
+                  }))}
                   filterOption={(input, option) =>
                     (option?.label ?? "")
                       .toLowerCase()
@@ -544,13 +563,10 @@ const Products = () => {
                   showSearch
                   allowClear
                   placeholder="Chọn hoặc nhập nhà cung cấp"
-                  options={[
-                    { value: "FAHASA", label: "FAHASA" },
-                    { value: "Nhã Nam", label: "Nhã Nam" },
-                    { value: "Thái Hà Books", label: "Thái Hà Books" },
-                    { value: "Alpha Books", label: "Alpha Books" },
-                    { value: "Phương Nam Book", label: "Phương Nam Book" },
-                  ]}
+                  options={suppliers.map((sup) => ({
+                    value: sup._id,
+                    label: sup.name,
+                  }))}
                   filterOption={(input, option) =>
                     (option?.label ?? "")
                       .toLowerCase()

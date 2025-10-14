@@ -34,13 +34,13 @@ const fetchOrders: QueryFunction<
   OrderResponse,
   [string, OrderQueryParams]
 > = async ({ queryKey }) => {
-  const [, { status, minAmount, maxAmount, search }] = queryKey;
+  const [, { status, startDate, endDate, search }] = queryKey;
 
   // Chỉ giữ lại param nào có giá trị thật sự
   const params: Record<string, unknown> = {};
   if (status && status.trim() !== "") params.status = status;
-  if (minAmount !== undefined) params.minAmount = minAmount;
-  if (maxAmount !== undefined) params.maxAmount = maxAmount;
+  if (startDate) params.startDate = startDate;
+  if (endDate) params.endDate = endDate;
   if (search && search.trim() !== "") params.search = search;
 
   const res = await axios.get<OrderResponse>(
@@ -52,8 +52,8 @@ const fetchOrders: QueryFunction<
 
 const Orders = () => {
   const [status, setStatus] = useState<string | undefined>();
-  const [minAmount, setMinAmount] = useState<number | undefined>();
-  const [maxAmount, setMaxAmount] = useState<number | undefined>();
+  const [startDate, setStartDate] = useState<string | undefined>();
+  const [endDate, setEndDate] = useState<string | undefined>();
   const [searchTerm, setSearchTerm] = useState(""); // search realtime
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
@@ -73,7 +73,7 @@ const Orders = () => {
     {
       queryKey: [
         "orders",
-        { status, minAmount, maxAmount, search: searchTerm },
+        { status, startDate, endDate, search: searchTerm },
       ],
       queryFn: fetchOrders,
     }
@@ -126,15 +126,6 @@ const Orders = () => {
     }
   };
 
-  // Lọc bỏ dấu tiếng Việt, ký tự đặc biệt, chuyển về chữ thường
-  // const normalizeText = (str: string) =>
-  //   str
-  //     .toLowerCase()
-  //     .normalize("NFD")
-  //     .replace(/[\u0300-\u036f]/g, "")
-  //     .replace(/đ/g, "d")
-  //     .replace(/[^a-z0-9\s]/g, "");
-
   const columns = [
     {
       title: "Khách hàng",
@@ -143,25 +134,7 @@ const Orders = () => {
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
-      title: "Nhân viên",
-      dataIndex: ["staff", "full_name"],
-      key: "staff",
-      render: (text: string) => <span className="font-medium">{text}</span>,
-    },
-    {
-      title: "Khách hàng",
-      key: "person",
-      render: (record) => {
-        if (record.customer) {
-          return record.customer.full_name; // Tên khách hàng
-        } else if (record.staff) {
-          return record.staff.full_name; // Tên nhân viên
-        }
-        return "-";
-      },
-    },
-    {
-      title: "Điện thoại",
+      title: "Sdt khách hàng",
       key: "phone",
       render: (record) => {
         if (record.customer) {
@@ -172,7 +145,12 @@ const Orders = () => {
         return "-";
       },
     },
-    { title: "Thành phố", dataIndex: "city", key: "city" },
+    {
+      title: "Nhân viên",
+      dataIndex: ["staff", "full_name"],
+      key: "staff",
+      render: (text: string) => <span className="font-medium">{text}</span>,
+    },
     {
       title: "Trạng thái",
       dataIndex: "status",
@@ -186,6 +164,24 @@ const Orders = () => {
           cancelled: "red",
         };
         return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
+      },
+    },
+    {
+      title: "Phương thức thanh toán",
+      dataIndex: "payment_method",
+      key: "payment_method",
+      render: (method: string) => method.replace(/_/g, " ").toUpperCase(),
+    },
+    {
+      title: "Ngày mua",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (value) => {
+        const date = new Date(value);
+        return date.toLocaleString("vi-VN", {
+          timeZone: "Asia/Ho_Chi_Minh",
+          hour12: false,
+        });
       },
     },
     {
@@ -227,7 +223,7 @@ const Orders = () => {
     <div>
       <main className="flex-1 p-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
-          <div className="flex items-center mb-4 gap-6">
+          <div className="flex items-center mb-4 gap-6 flex-wrap">
             <h3 className="text-lg font-semibold w-48">Danh sách đơn hàng:</h3>
 
             <Search
@@ -253,34 +249,27 @@ const Orders = () => {
               ]}
             />
 
+            {/* Bộ lọc theo thời gian */}
             <Input
-              type="text"
-              placeholder="Min Amount"
-              style={{ width: 140 }}
-              value={
-                minAmount !== undefined ? minAmount.toLocaleString("vi-VN") : ""
+              type="date"
+              placeholder="Từ ngày"
+              style={{ width: 180 }}
+              onChange={(e) =>
+                setStartDate(
+                  e.target.value ? new Date(e.target.value).toISOString() : undefined
+                )
               }
-              onChange={(e) => {
-                const rawValue = e.target.value
-                  .replace(/,/g, "")
-                  .replace(/\./g, "");
-                setMinAmount(rawValue !== "" ? Number(rawValue) : undefined);
-              }}
             />
 
             <Input
-              type="text"
-              placeholder="Max Amount"
-              style={{ width: 140 }}
-              value={
-                maxAmount !== undefined ? maxAmount.toLocaleString("vi-VN") : ""
+              type="date"
+              placeholder="Đến ngày"
+              style={{ width: 180 }}
+              onChange={(e) =>
+                setEndDate(
+                  e.target.value ? new Date(e.target.value).toISOString() : undefined
+                )
               }
-              onChange={(e) => {
-                const rawValue = e.target.value
-                  .replace(/,/g, "")
-                  .replace(/\./g, "");
-                setMaxAmount(rawValue !== "" ? Number(rawValue) : undefined);
-              }}
             />
           </div>
 

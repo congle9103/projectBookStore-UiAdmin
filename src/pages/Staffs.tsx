@@ -16,6 +16,7 @@ import {
   Spin,
   Select,
   Popconfirm,
+  InputNumber,
 } from "antd";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -84,14 +85,14 @@ const Staffs = () => {
   // 🔹 FETCH DATA
   // ==============================
   const {
-  data: staffsData,
-  isError,
-  error,
-  isFetching,
-} = useQuery({
-  queryKey: ["staffs", page, limit, keyword, sort_type, sort_by],
-  queryFn: () => fetchStaffs({ page, limit, keyword, sort_type, sort_by }),
-});
+    data: staffsData,
+    isError,
+    error,
+    isFetching,
+  } = useQuery({
+    queryKey: ["staffs", page, limit, keyword, sort_type, sort_by],
+    queryFn: () => fetchStaffs({ page, limit, keyword, sort_type, sort_by }),
+  });
 
   console.log("staffData", staffsData);
 
@@ -305,56 +306,93 @@ const Staffs = () => {
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
+              {/* USERNAME */}
               <Form.Item
                 name="username"
                 label="Tên đăng nhập"
-                rules={[{ required: true, message: "Nhập tên đăng nhập" }]}
-              >
-                <Input disabled={!!editingStaff} />
-              </Form.Item>
-
-              {!editingStaff && (
-                <Form.Item
-                  name="password"
-                  label="Mật khẩu"
-                  rules={[{ required: true, message: "Nhập mật khẩu" }]}
-                >
-                  <Input.Password />
-                </Form.Item>
-              )}
-
-              <Form.Item
-                name="full_name"
-                label="Họ và tên"
-                rules={[{ required: true, message: "Nhập họ tên" }]}
-              >
-                <Input />
-              </Form.Item>
-
-              <Form.Item
-                name="email"
-                label="Email"
                 rules={[
+                  { required: true, message: "Vui lòng nhập tên đăng nhập" },
                   {
-                    required: true,
-                    type: "email",
-                    message: "Nhập email hợp lệ",
+                    min: 3,
+                    max: 20,
+                    message: "Tên đăng nhập phải từ 3–20 ký tự",
+                  },
+                  {
+                    pattern: /^(?![_.])(?!.*[_.]{2})[a-z0-9._]+(?<![_.])$/,
+                    message:
+                      "Tên đăng nhập không được bắt đầu/kết thúc bằng '.' hoặc '_' và không chứa ký tự đặc biệt",
                   },
                 ]}
               >
                 <Input disabled={!!editingStaff} />
               </Form.Item>
 
-              <Form.Item name="phone" label="Số điện thoại">
+              {/* PASSWORD */}
+              {!editingStaff && (
+                <Form.Item
+                  name="password"
+                  label="Mật khẩu"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập mật khẩu" },
+                    {
+                      pattern:
+                        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+                      message:
+                        "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt",
+                    },
+                  ]}
+                >
+                  <Input.Password />
+                </Form.Item>
+              )}
+
+              {/* FULL NAME */}
+              <Form.Item
+                name="full_name"
+                label="Họ và tên"
+                rules={[
+                  { required: true, message: "Vui lòng nhập họ tên" },
+                  { min: 3, max: 100, message: "Họ tên phải từ 3–100 ký tự" },
+                ]}
+              >
+                <Input />
+              </Form.Item>
+
+              {/* EMAIL */}
+              <Form.Item
+                name="email"
+                label="Email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email" },
+                  { type: "email", message: "Email không hợp lệ" },
+                  { max: 100, message: "Email tối đa 100 ký tự" },
+                ]}
+              >
+                <Input disabled={!!editingStaff} />
+              </Form.Item>
+
+              {/* PHONE */}
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại" },
+                  {
+                    pattern: /^\d{10,15}$/,
+                    message: "Số điện thoại phải từ 10–15 số",
+                  },
+                ]}
+              >
                 <Input />
               </Form.Item>
             </Col>
 
             <Col span={12}>
+              {/* ROLE */}
               <Form.Item
                 name="role"
                 label="Vai trò"
-                rules={[{ required: true, message: "Chọn vai trò" }]}
+                rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
               >
                 <Select
                   options={[
@@ -364,14 +402,52 @@ const Staffs = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="salary" label="Lương (VNĐ)">
-                <Input type="number" />
+              {/* SALARY */}
+              <Form.Item
+                name="salary"
+                label="Lương (VNĐ)"
+                rules={[
+                  { required: true, message: "Vui lòng nhập lương" },
+                  {
+                    type: "number",
+                    min: 0,
+                    message: "Lương phải lớn hơn hoặc bằng 0",
+                  },
+                  {
+                    validator: (_, value) => {
+                      const numberValue = Number(value);
+                      if (isNaN(numberValue) || numberValue <= 0) {
+                        return Promise.reject("Lương phải lớn hơn 0");
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
+              >
+                <InputNumber
+                  className="!w-full"
+                  min={0}
+                  step={1000}
+                  // 💰 Hiển thị dấu phẩy phân cách hàng nghìn
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  // 🔢 Xóa dấu phẩy khi gửi dữ liệu thật
+                  parser={(value) => value.replace(/,/g, "")}
+                />
               </Form.Item>
-
-              <Form.Item name="hire_date" label="Ngày tuyển dụng">
+              {/* HIRE DATE */}
+              <Form.Item
+                name="hire_date"
+                label="Ngày tuyển dụng"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày tuyển dụng" },
+                ]}
+              >
                 <DatePicker className="w-full" format="YYYY-MM-DD" />
               </Form.Item>
 
+              {/* IS ACTIVE */}
               <Form.Item name="is_active" valuePropName="checked">
                 <Checkbox>Đang hoạt động</Checkbox>
               </Form.Item>
