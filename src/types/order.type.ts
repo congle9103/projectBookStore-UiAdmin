@@ -49,7 +49,7 @@ export interface OrderResponse {
 // Khai báo type cho params
 export type OrderQueryParams = {
   status?: string;
-  minAmount?: number;
-  maxAmount?: number;
+  startDate?: number;
+  endDate?: number;
   search?: string;
 };

@@ -57,9 +57,10 @@ const Orders = () => {
   const [searchTerm, setSearchTerm] = useState(""); // search realtime
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
-
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [startDateInput, setStartDateInput] = useState<string | undefined>();
+  const [endDateInput, setEndDateInput] = useState<string | undefined>();
 
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
@@ -71,10 +72,7 @@ const Orders = () => {
     isFetching,
   } = useQuery<OrderResponse, Error, OrderResponse, [string, OrderQueryParams]>(
     {
-      queryKey: [
-        "orders",
-        { status, startDate, endDate, search: searchTerm },
-      ],
+      queryKey: ["orders", { status, startDate, endDate, search: searchTerm }],
       queryFn: fetchOrders,
     }
   );
@@ -224,14 +222,14 @@ const Orders = () => {
       <main className="flex-1 p-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
           <div className="flex items-center mb-4 gap-6 flex-wrap">
-            <h3 className="text-lg font-semibold w-48">Danh sách đơn hàng:</h3>
+            <h3 className="text-lg font-semibold w-44">Danh sách đơn hàng:</h3>
 
             <Search
               placeholder="Tìm theo tên khách hàng, nhân viên"
               allowClear
               onChange={(e) => setSearchTerm(e.target.value)} // gọi API ngay khi nhập
               value={searchTerm}
-              className="!w-100"
+              className="!w-74"
             />
 
             <Select
@@ -250,44 +248,56 @@ const Orders = () => {
             />
 
             {/* Bộ lọc theo thời gian */}
+            <label> Từ ngày: </label>
             <Input
               type="date"
               placeholder="Từ ngày"
-              style={{ width: 180 }}
-              onChange={(e) =>
-                setStartDate(
-                  e.target.value ? new Date(e.target.value).toISOString() : undefined
-                )
-              }
+              style={{ width: 130 }}
+              value={startDateInput /* state string 'YYYY-MM-DD' */}
+              onChange={(e) => {
+  const v = e.target.value;
+  setStartDateInput(v);
+  if (v) {
+    const iso = new Date(`${v}T00:00:00+07:00`).toISOString();
+    setStartDate(iso);
+  } else setStartDate(undefined);
+}}
+
             />
 
+            <label> Đến ngày: </label>
             <Input
               type="date"
               placeholder="Đến ngày"
-              style={{ width: 180 }}
-              onChange={(e) =>
-                setEndDate(
-                  e.target.value ? new Date(e.target.value).toISOString() : undefined
-                )
-              }
+              style={{ width: 130 }}
+              value={endDateInput /* state string 'YYYY-MM-DD' */}
+              onChange={(e) => {
+  const v = e.target.value;
+  setEndDateInput(v);
+  if (v) {
+    const iso = new Date(`${v}T23:59:59+07:00`).toISOString();
+    setEndDate(iso);
+  } else setEndDate(undefined);
+}}
+
+            />
+
+            <Table
+              rowKey="_id"
+              columns={columns}
+              dataSource={orders?.data || []} // BE đã lọc sẵn
+              pagination={{ pageSize: 5 }}
+              loading={isFetching}
+              scroll={{ x: true }}
+              onRow={(record) => ({
+                onClick: () => {
+                  setSelectedOrder(record);
+                  setIsDetailModalOpen(true);
+                },
+                style: { cursor: "pointer" },
+              })}
             />
           </div>
-
-          <Table
-            rowKey="_id"
-            columns={columns}
-            dataSource={orders?.data || []} // BE đã lọc sẵn
-            pagination={{ pageSize: 5 }}
-            loading={isFetching}
-            scroll={{ x: true }}
-            onRow={(record) => ({
-              onClick: () => {
-                setSelectedOrder(record);
-                setIsDetailModalOpen(true);
-              },
-              style: { cursor: "pointer" },
-            })}
-          />
         </div>
       </main>
 
