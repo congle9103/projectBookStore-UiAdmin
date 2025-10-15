@@ -35,15 +35,18 @@ const fetchCustomers = async ({
   limit = 5,
   sort_type,
   keyword,
+  city,
 }: {
   page?: number;
   limit?: number;
   sort_type?: string;
   keyword?: string;
+  city?: string;
 }) => {
   const params: any = { page, limit };
   if (keyword) params.keyword = keyword;
   if (sort_type) params.sort_type = sort_type;
+  if (city) params.city = city; // 👈 thêm dòng này
 
   const res = await axios.get(API_URL, { params });
   return res.data.data;
@@ -63,6 +66,7 @@ const Customers = () => {
   const limit = parseInt(searchParams.get("limit") || "5");
   const keyword = searchParams.get("keyword") || "";
   const sort_type = searchParams.get("sort_type") || "desc";
+  const city = searchParams.get("city") || "";
 
   const updateParams = (
     updates: Record<string, string | number | undefined>
@@ -84,8 +88,8 @@ const Customers = () => {
     error,
     isFetching,
   } = useQuery({
-    queryKey: ["customers", page, limit, keyword, sort_type],
-    queryFn: () => fetchCustomers({ page, limit, keyword, sort_type }),
+    queryKey: ["customers", page, limit, keyword, sort_type, city],
+    queryFn: () => fetchCustomers({ page, limit, keyword, sort_type, city }),
   });
 
   const customers = customersData || [];
@@ -240,7 +244,7 @@ const Customers = () => {
             enterButton
             defaultValue={keyword}
             onSearch={(value) => updateParams({ keyword: value, page: 1 })}
-            className="!w-80 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
+            className="!w-60 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
           />
 
           <Select
@@ -250,6 +254,26 @@ const Customers = () => {
             options={[
               { value: "desc", label: "Tổng chi tiêu: Cao → Thấp" },
               { value: "asc", label: "Tổng chi tiêu: Thấp → Cao" },
+            ]}
+          />
+
+          <Search
+            placeholder="Lọc theo thành phố"
+            allowClear
+            enterButton
+            defaultValue={city}
+            onSearch={(value) => updateParams({ city: value, page: 1 })}
+            className="!w-44 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
+          />
+
+          <Select
+            defaultValue={searchParams.get("is_active") || ""}
+            className="!w-34"
+            onChange={(value) => updateParams({ is_active: value, page: 1 })}
+            options={[
+              { value: "", label: "Trạng thái" },
+              { value: "true", label: "Hoạt động" },
+              { value: "false", label: "Khoá" },
             ]}
           />
 
