@@ -38,17 +38,23 @@ const fetchStaffs = async ({
   sort_type,
   sort_by,
   keyword,
+  role,
+  is_active,
 }: {
   page?: number;
   limit?: number;
   sort_type?: string;
   sort_by?: string;
   keyword?: string;
+  role?: string;
+  is_active?: string;
 }) => {
   const params: any = { page, limit };
   if (keyword) params.keyword = keyword;
   if (sort_type) params.sort_type = sort_type;
   if (sort_by) params.sort_by = sort_by;
+  if (role) params.role = role;
+  if (is_active) params.is_active = is_active;
 
   const res = await axios.get(API_URL, { params });
   return res.data.data;
@@ -69,6 +75,8 @@ const Staffs = () => {
   const keyword = searchParams.get("keyword") || "";
   const sort_type = searchParams.get("sort_type") || "desc";
   const sort_by = searchParams.get("sort_by") || "updatedAt";
+  const role = searchParams.get("role") || "";
+  const is_active = searchParams.get("is_active") || "";
 
   const updateParams = (
     updates: Record<string, string | number | undefined>
@@ -90,11 +98,27 @@ const Staffs = () => {
     error,
     isFetching,
   } = useQuery({
-    queryKey: ["staffs", page, limit, keyword, sort_type, sort_by],
-    queryFn: () => fetchStaffs({ page, limit, keyword, sort_type, sort_by }),
+    queryKey: [
+      "staffs",
+      page,
+      limit,
+      keyword,
+      sort_type,
+      sort_by,
+      role,
+      is_active,
+    ],
+    queryFn: () =>
+      fetchStaffs({
+        page,
+        limit,
+        keyword,
+        sort_type,
+        sort_by,
+        role,
+        is_active,
+      }),
   });
-
-  console.log("staffData", staffsData);
 
   const staffs = staffsData?.data || [];
 
@@ -256,6 +280,30 @@ const Staffs = () => {
             options={[
               { value: "asc", label: "Lương thấp → cao" },
               { value: "desc", label: "Lương cao → thấp" },
+            ]}
+          />
+
+          <Select
+            placeholder="Lọc theo vai trò"
+            style={{ width: 180 }}
+            value={role || undefined}
+            onChange={(value) => updateParams({ role: value, page: 1 })}
+            options={[
+              { value: "", label: "Tất cả vai trò" },
+              { value: "admin", label: "Admin" },
+              { value: "dev", label: "Dev" },
+            ]}
+          />
+
+          <Select
+            placeholder="Trạng thái"
+            style={{ width: 180 }}
+            value={is_active || undefined}
+            onChange={(value) => updateParams({ is_active: value, page: 1 })}
+            options={[
+              { value: "", label: "Tất cả trạng thái" },
+              { value: "true", label: "Hoạt động" },
+              { value: "false", label: "Khoá" },
             ]}
           />
 

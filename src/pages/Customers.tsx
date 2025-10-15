@@ -36,17 +36,20 @@ const fetchCustomers = async ({
   sort_type,
   keyword,
   city,
+  is_active,
 }: {
   page?: number;
   limit?: number;
   sort_type?: string;
   keyword?: string;
   city?: string;
+  is_active?: string;
 }) => {
   const params: any = { page, limit };
   if (keyword) params.keyword = keyword;
   if (sort_type) params.sort_type = sort_type;
-  if (city) params.city = city; // 👈 thêm dòng này
+  if (city) params.city = city;
+  if (is_active) params.is_active = is_active;
 
   const res = await axios.get(API_URL, { params });
   return res.data.data;
@@ -67,6 +70,7 @@ const Customers = () => {
   const keyword = searchParams.get("keyword") || "";
   const sort_type = searchParams.get("sort_type") || "desc";
   const city = searchParams.get("city") || "";
+  const is_active = searchParams.get("is_active") || "";
 
   const updateParams = (
     updates: Record<string, string | number | undefined>
@@ -88,8 +92,9 @@ const Customers = () => {
     error,
     isFetching,
   } = useQuery({
-    queryKey: ["customers", page, limit, keyword, sort_type, city],
-    queryFn: () => fetchCustomers({ page, limit, keyword, sort_type, city }),
+    queryKey: ["customers", page, limit, keyword, sort_type, city, is_active],
+    queryFn: () =>
+      fetchCustomers({ page, limit, keyword, sort_type, city, is_active }),
   });
 
   const customers = customersData || [];
@@ -244,12 +249,12 @@ const Customers = () => {
             enterButton
             defaultValue={keyword}
             onSearch={(value) => updateParams({ keyword: value, page: 1 })}
-            className="!w-60 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
+            className="!w-62 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
           />
 
           <Select
             defaultValue={sort_type}
-            style={{ width: 220 }}
+            style={{ width: 204 }}
             onChange={(value) => updateParams({ sort_type: value, page: 1 })}
             options={[
               { value: "desc", label: "Tổng chi tiêu: Cao → Thấp" },
@@ -263,12 +268,12 @@ const Customers = () => {
             enterButton
             defaultValue={city}
             onSearch={(value) => updateParams({ city: value, page: 1 })}
-            className="!w-44 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
+            className="!w-52 [&_.ant-btn]:!bg-blue-500 [&_.ant-btn]:!text-white"
           />
 
           <Select
             defaultValue={searchParams.get("is_active") || ""}
-            className="!w-34"
+            className="!w-26"
             onChange={(value) => updateParams({ is_active: value, page: 1 })}
             options={[
               { value: "", label: "Trạng thái" },
