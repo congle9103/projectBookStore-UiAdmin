@@ -30,8 +30,6 @@ import { Upload } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd/es/upload/interface";
 
-const formData = new FormData();
-
 const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products`;
 
 // ========================================
@@ -68,51 +66,40 @@ const fetchProducts = async ({
 // 🔹 HÀM CREATE SẢN PHẨM
 // ========================================
 const createProduct = async (values: any) => {
-  const payload = {
-    // Không spread ...values trực tiếp nếu muốn tránh gửi trường thừa/không cần
-    product_name: values.product_name,
-    category_id: values.category_id,
-    supplier: values.supplier,
-    publisher: values.publisher,
-    authors: values.authors
-      ? values.authors.split(",").map((a: string) => a.trim())
-      : [],
-    pages: values.pages,
-    publicationYear: values.publicationYear,
-    format: values.format,
-    dimensions: values.dimensions,
-    weight: values.weight,
-    thumbnail: values.thumbnail?.[0]?.originFileObj || null,
-    originalPrice: values.originalPrice,
-    discountPercent: values.discountPercent,
-    stock: values.stock,
-    slug:
-      values.product_name
-        ?.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)+/g, "") || "",
-    description: values.description,
-    isNew: values.isNew,
-    isPopular: values.isPopular,
-    isFlashSale: values.isFlashSale,
-  };
+  // 🔹 Luôn tạo formData mới mỗi lần submit
+  const formData = new FormData();
 
-  Object.entries(values).forEach(([key, value]) => {
-    if (key === "thumbnails" && value?.[0]?.originFileObj) {
-      formData.append("thumbnail", value[0].originFileObj); // đổi key cho backend nhận
-    } else if (typeof value !== "undefined") {
-      formData.append(key, value);
-    }
-  });
+  // 🔹 Xử lý các field text/number
+  formData.append("product_name", values.product_name);
+  formData.append("category_id", values.category_id);
+  formData.append("supplier", values.supplier);
+  formData.append("publisher", values.publisher);
+  formData.append("authors", values.authors);
+  formData.append("pages", values.pages);
+  formData.append("publicationYear", values.publicationYear);
+  formData.append("format", values.format);
+  formData.append("dimensions", values.dimensions);
+  formData.append("weight", values.weight);
+  formData.append("originalPrice", values.originalPrice);
+  formData.append("discountPercent", values.discountPercent || 0);
+  formData.append("stock", values.stock);
+  formData.append("slug", values.slug);
+  formData.append("description", values.description || "");
+  formData.append("isNew", values.isNew ? "true" : "false");
+  formData.append("isPopular", values.isPopular ? "true" : "false");
+  formData.append("isFlashSale", values.isFlashSale ? "true" : "false");
 
+  // 🔹 Xử lý ảnh (1 file)
+  if (values.thumbnail?.[0]?.originFileObj) {
+    formData.append("thumbnail", values.thumbnail[0].originFileObj);
+  }
+
+  // 🔹 Gửi request multipart/form-data
   const response = await axios.post(API_URL, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
-  return response.data; // Trả về data đầy đủ để sử dụng nếu cần
+
+  return response.data;
 };
 
 // ========================================
@@ -121,12 +108,8 @@ const createProduct = async (values: any) => {
 const updateProduct = async (id: string, values: any) => {
   const payload = {
     ...values,
-    authors: values.authors
-      ? values.authors.split(",").map((a: string) => a.trim())
-      : [],
-    thumbnails: values.thumbnails
-      ? values.thumbnails.split(",").map((url: string) => url.trim())
-      : [],
+    authors: values.authors,
+    thumbnails: values.thumbnails,
     slug:
       values.product_name
         ?.toLowerCase()
@@ -263,8 +246,8 @@ const Products = () => {
     setEditingProduct(record);
     form.setFieldsValue({
       ...record,
-      authors: record.authors?.join(", "),
-      thumbnails: record.thumbnails?.join(", "),
+      authors: record.authors,
+      thumbnails: record.thumbnails,
     });
     setIsModalOpen(true);
   };
@@ -286,20 +269,32 @@ const Products = () => {
   const columns = [
     {
       title: "Ảnh",
-      dataIndex: "thumbnails",
-      key: "thumbnails",
-      render: (thumb: string) => (
-        <Image
-          src={
-            thumb?.startsWith("http")
-              ? thumb
-              : `${import.meta.env.VITE_BACKEND_URL_STATIC}/${thumb}`
-          }
-          width={60}
-          height={60}
-          style={{ objectFit: "cover", borderRadius: 8 }}
-        />
-      ),
+      dataIndex: "thumbnail", // hoặc "thumbnails" tùy backend
+      key: "thumbnail",
+      render: (thumb: any) => {
+        // 👉 Nếu backend trả về object { url: '...' } hoặc mảng, ta xử lý an toàn
+        const src =
+          typeof thumb === "string"
+            ? thumb
+            : Array.isArray(thumb)
+            ? thumb[0]
+            : thumb?.url || thumb?.path || "";
+
+        return src ? (
+          <Image
+            src={
+              src.startsWith("http")
+                ? src
+                : `${import.meta.env.VITE_BACKEND_URL_STATIC}/${src}`
+            }
+            width={60}
+            height={60}
+            style={{ objectFit: "cover", borderRadius: 8 }}
+          />
+        ) : (
+          <span style={{ color: "#999" }}>Không có ảnh</span>
+        );
+      },
     },
     { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
     {
@@ -529,7 +524,7 @@ const Products = () => {
                 name="authors"
                 label="Tác giả"
                 rules={[
-                  { required: true, message: "Nhập ít nhất 1 tác giả" },
+                  { required: true, message: "Vui lòng nhập tên tác giả" },
                   {
                     min: 2,
                     message: "Tên tác giả quá ngắn (tối thiểu 2 ký tự)",
@@ -537,7 +532,7 @@ const Products = () => {
                   { max: 255, message: "Tên tác giả tối đa 255 ký tự" },
                 ]}
               >
-                <Input placeholder="Nhập tên tác giả, cách nhau bằng dấu phẩy" />
+                <Input placeholder="Nhập tên tác giả" />
               </Form.Item>
 
               <Form.Item
