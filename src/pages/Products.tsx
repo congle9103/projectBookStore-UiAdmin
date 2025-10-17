@@ -26,6 +26,11 @@ import type { Product } from "../types/product.type";
 import type { ICategory } from "../types/category.type";
 import type { ISupplier } from "../types/supplier.type";
 import type { IPublisher } from "../types/publisher.type";
+import { Upload } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import type { UploadFile } from "antd/es/upload/interface";
+
+const formData = new FormData();
 
 const API_URL = `https://projectbookstore-backendapi.onrender.com/api/v1/products`;
 
@@ -77,9 +82,7 @@ const createProduct = async (values: any) => {
     format: values.format,
     dimensions: values.dimensions,
     weight: values.weight,
-    thumbnails: values.thumbnails
-      ? values.thumbnails.split(",").map((url: string) => url.trim())
-      : [],
+    thumbnail: values.thumbnail?.[0]?.originFileObj || null,
     originalPrice: values.originalPrice,
     discountPercent: values.discountPercent,
     stock: values.stock,
@@ -96,8 +99,19 @@ const createProduct = async (values: any) => {
     isFlashSale: values.isFlashSale,
   };
 
-  const response = await axios.post(API_URL, payload);
-  console.log("Create Response from Backend:", response.data); // Thêm log để thấy createdAt + updatedAt
+  Object.entries(values).forEach(([key, value]) => {
+    if (key === "thumbnails" && value?.[0]?.originFileObj) {
+      formData.append("thumbnail", value[0].originFileObj); // đổi key cho backend nhận
+    } else if (typeof value !== "undefined") {
+      formData.append(key, value);
+    }
+  });
+
+  const response = await axios.post(API_URL, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data; // Trả về data đầy đủ để sử dụng nếu cần
 };
 
@@ -274,21 +288,18 @@ const Products = () => {
       title: "Ảnh",
       dataIndex: "thumbnails",
       key: "thumbnails",
-      render: (thumbs: string[] | string) => {
-        const thumb = Array.isArray(thumbs) ? thumbs[0] : thumbs;
-        return (
-          <Image
-            src={
-              thumb?.startsWith("http")
-                ? thumb
-                : `${import.meta.env.VITE_BACKEND_URL_STATIC}/${thumb}`
-            }
-            width={60}
-            height={60}
-            style={{ objectFit: "cover", borderRadius: 8 }}
-          />
-        );
-      },
+      render: (thumb: string) => (
+        <Image
+          src={
+            thumb?.startsWith("http")
+              ? thumb
+              : `${import.meta.env.VITE_BACKEND_URL_STATIC}/${thumb}`
+          }
+          width={60}
+          height={60}
+          style={{ objectFit: "cover", borderRadius: 8 }}
+        />
+      ),
     },
     { title: "Tên sản phẩm", dataIndex: "product_name", key: "product_name" },
     {
@@ -708,26 +719,23 @@ const Products = () => {
               </Form.Item>
 
               <Form.Item
-                name="thumbnails"
-                label="Ảnh (URL)"
-                rules={[
-                  {
-                    validator: (_, value) => {
-                      if (!value) return Promise.resolve();
-                      const urls = value.split(",").map((u) => u.trim());
-                      const isValid = urls.every((url) =>
-                        /^(http|https):\/\/[^ "]+$/.test(url)
-                      );
-                      return isValid
-                        ? Promise.resolve()
-                        : Promise.reject(
-                            "Mỗi ảnh phải là URL hợp lệ (http/https)"
-                          );
-                    },
-                  },
-                ]}
+                name="thumbnail"
+                label="Ảnh sản phẩm"
+                valuePropName="fileList"
+                getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
+                rules={[{ required: true, message: "Vui lòng tải lên 1 ảnh" }]}
               >
-                <Input placeholder="Nhập hoặc dán link ảnh (nhiều link cách nhau bằng dấu phẩy)" />
+                <Upload
+                  listType="picture-card"
+                  maxCount={1}
+                  accept="image/*"
+                  beforeUpload={() => false} // ❌ không upload tự động — bạn xử lý thủ công khi submit
+                >
+                  <div>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>Tải ảnh</div>
+                  </div>
+                </Upload>
               </Form.Item>
 
               <Row gutter={8}>

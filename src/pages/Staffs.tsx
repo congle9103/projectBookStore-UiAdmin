@@ -272,7 +272,7 @@ const Staffs = () => {
 
           <Select
             placeholder="Sắp xếp theo lương"
-            style={{ width: 220 }}
+            style={{ width: 180 }}
             value={sort_type || undefined}
             onChange={(value) =>
               updateParams({ sort_type: value, sort_by: "salary" })
@@ -285,7 +285,7 @@ const Staffs = () => {
 
           <Select
             placeholder="Lọc theo vai trò"
-            style={{ width: 180 }}
+            style={{ width: 150 }}
             value={role || undefined}
             onChange={(value) => updateParams({ role: value, page: 1 })}
             options={[
@@ -297,7 +297,7 @@ const Staffs = () => {
 
           <Select
             placeholder="Trạng thái"
-            style={{ width: 180 }}
+            style={{ width: 120 }}
             value={is_active || undefined}
             onChange={(value) => updateParams({ is_active: value, page: 1 })}
             options={[

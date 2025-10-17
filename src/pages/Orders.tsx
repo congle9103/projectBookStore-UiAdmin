@@ -161,7 +161,16 @@ const Orders = () => {
           completed: "green",
           cancelled: "red",
         };
-        return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
+
+        const viStatus: Record<string, string> = {
+          pending: "Chờ xử lý",
+          processing: "Đang xử lý",
+          shipping: "Đang giao",
+          completed: "Hoàn thành",
+          cancelled: "Đã hủy",
+        };
+
+        return <Tag color={colors[status]}>{viStatus[status] || status}</Tag>;
       },
     },
     {
@@ -189,7 +198,7 @@ const Orders = () => {
       render: (amount: number) => <span>{amount.toLocaleString()} đ</span>,
     },
     {
-      title: "Hành động",
+      title: "Thao tác",
       key: "action",
       render: (record: Order) => (
         <Space>
@@ -200,7 +209,7 @@ const Orders = () => {
               e.stopPropagation(); // Ngăn click lan ra row
             }}
           >
-            Edit
+            Sửa
           </Button>
           <Popconfirm
             title="Bạn có chắc muốn xóa đơn hàng này?"
@@ -208,7 +217,7 @@ const Orders = () => {
             okText="Xóa"
             cancelText="Hủy"
           >
-            <Button danger>Delete</Button>
+            <Button danger>Xóa</Button>
           </Popconfirm>
         </Space>
       ),
@@ -219,7 +228,7 @@ const Orders = () => {
 
   return (
     <div>
-      <main className="flex-1 p-6">
+      <div className="p-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
           <div className="flex items-center mb-4 gap-6 flex-wrap">
             <h3 className="text-lg font-semibold w-44">Danh sách đơn hàng:</h3>
@@ -255,14 +264,13 @@ const Orders = () => {
               style={{ width: 130 }}
               value={startDateInput /* state string 'YYYY-MM-DD' */}
               onChange={(e) => {
-  const v = e.target.value;
-  setStartDateInput(v);
-  if (v) {
-    const iso = new Date(`${v}T00:00:00+07:00`).toISOString();
-    setStartDate(iso);
-  } else setStartDate(undefined);
-}}
-
+                const v = e.target.value;
+                setStartDateInput(v);
+                if (v) {
+                  const iso = new Date(`${v}T00:00:00+07:00`).toISOString();
+                  setStartDate(iso);
+                } else setStartDate(undefined);
+              }}
             />
 
             <label> Đến ngày: </label>
@@ -272,34 +280,32 @@ const Orders = () => {
               style={{ width: 130 }}
               value={endDateInput /* state string 'YYYY-MM-DD' */}
               onChange={(e) => {
-  const v = e.target.value;
-  setEndDateInput(v);
-  if (v) {
-    const iso = new Date(`${v}T23:59:59+07:00`).toISOString();
-    setEndDate(iso);
-  } else setEndDate(undefined);
-}}
-
-            />
-
-            <Table
-              rowKey="_id"
-              columns={columns}
-              dataSource={orders?.data || []} // BE đã lọc sẵn
-              pagination={{ pageSize: 5 }}
-              loading={isFetching}
-              scroll={{ x: true }}
-              onRow={(record) => ({
-                onClick: () => {
-                  setSelectedOrder(record);
-                  setIsDetailModalOpen(true);
-                },
-                style: { cursor: "pointer" },
-              })}
+                const v = e.target.value;
+                setEndDateInput(v);
+                if (v) {
+                  const iso = new Date(`${v}T23:59:59+07:00`).toISOString();
+                  setEndDate(iso);
+                } else setEndDate(undefined);
+              }}
             />
           </div>
+          <Table
+            rowKey="_id"
+            columns={columns}
+            dataSource={orders?.data || []} // BE đã lọc sẵn
+            pagination={{ pageSize: 5 }}
+            loading={isFetching}
+            scroll={{ x: true }}
+            onRow={(record) => ({
+              onClick: () => {
+                setSelectedOrder(record);
+                setIsDetailModalOpen(true);
+              },
+              style: { cursor: "pointer" },
+            })}
+          />
         </div>
-      </main>
+      </div>
 
       {/* Modal Edit Order */}
       <Modal
